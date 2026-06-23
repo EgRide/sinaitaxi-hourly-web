@@ -1,10 +1,6 @@
-// Thin typed client against sinaitaxi-hourly-api. The shape
-// mirrors src/lib/api.ts in sinaitaxi-esim-web so the team has
-// one mental model across both products.
-//
-// All endpoints are populated in later phases; for Phase 0 we
-// expose only the `health` ping so we can prove the storefront
-// can reach the API end-to-end.
+// Thin typed client against sinaitaxi-hourly-api. The shape mirrors
+// src/lib/api.ts in sinaitaxi-esim-web so the team has one mental
+// model across both products.
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4100';
 
@@ -15,10 +11,9 @@ class ApiError extends Error {
   }
 }
 
-const request = async <T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> => {
+type RequestOpts = RequestInit & { next?: { revalidate?: number } };
+
+const request = async <T>(path: string, init: RequestOpts = {}): Promise<T> => {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
@@ -26,11 +21,7 @@ const request = async <T>(
       Accept: 'application/json',
       ...(init.headers ?? {}),
     },
-    // Storefront pages opt in to revalidate semantics per route
-    // (`fetch(..., { next: { revalidate: 60 } })`). The default
-    // here is "no cache" so server actions don't accidentally
-    // serve stale data.
-    cache: 'no-store',
+    cache: init.next ? undefined : 'no-store',
   });
   if (!res.ok) {
     let body: unknown;
@@ -41,8 +32,35 @@ const request = async <T>(
   return res.json() as Promise<T>;
 };
 
+export interface Country { code: string; name: string; }
+export interface Polygon { id: string; name: string; slug: string | null; }
+export interface VehicleClass {
+  slug: string;
+  label: string;
+  description: string;
+  seats: string;
+}
+
 export const api = {
   health: () => request<{ ok: boolean; ts: number; service: string }>('/health'),
+
+  // ── Catalog (Phase 1) ─────────────────────────────────────
+  // Revalidates every hour — the storefront caches the country
+  // and polygon lists so a customer mid-search doesn't pay the
+  // PHP round-trip on every page nav.
+  countries: () =>
+    request<{ countries: Country[] }>('/v1/catalog/countries', {
+      next: { revalidate: 3600 },
+    }),
+  polygons: (code: string) =>
+    request<{ country: Country; polygons: Polygon[] }>(
+      `/v1/catalog/countries/${encodeURIComponent(code)}/polygons`,
+      { next: { revalidate: 3600 } },
+    ),
+  vehicleClasses: () =>
+    request<{ classes: VehicleClass[] }>('/v1/catalog/vehicle-classes', {
+      next: { revalidate: 86400 },
+    }),
 };
 
 export { ApiError };
