@@ -41,6 +41,29 @@ export interface VehicleClass {
   seats: string;
 }
 
+export interface ResolveAddressInput {
+  countryCode: string;
+  locality?: string | null;
+  sublocality?: string | null;
+  lat?: number;
+  lng?: number;
+  address?: string;
+}
+
+export type ResolveAddressResult =
+  | {
+      notServiced: true;
+      reason: 'country_not_operated' | 'no_polygons_in_country';
+      countryCode: string;
+      country?: Country;
+    }
+  | {
+      notServiced?: false;
+      country: Country;
+      polygon: { id: string; name: string; slug: string | null; confidence: 'exact' | 'partial' } | null;
+      candidates: { id: string; name: string; slug: string | null }[];
+    };
+
 export const api = {
   health: () => request<{ ok: boolean; ts: number; service: string }>('/health'),
 
@@ -60,6 +83,12 @@ export const api = {
   vehicleClasses: () =>
     request<{ classes: VehicleClass[] }>('/v1/catalog/vehicle-classes', {
       next: { revalidate: 86400 },
+    }),
+
+  resolveAddress: (input: ResolveAddressInput) =>
+    request<ResolveAddressResult>('/v1/resolve-address', {
+      method: 'POST',
+      body: JSON.stringify(input),
     }),
 };
 

@@ -1,88 +1,101 @@
 'use client';
 
-// The marketplace search form (Mozio shape, polygon-bound).
+// Address-first search form (Mozio shape, adapted for our PHP
+// constraint).
 //
-// Why dropdowns instead of pure address autocomplete?
-// PHP exposes polygon names + slugs but NOT geometry on any
-// public endpoint, so we can't resolve an arbitrary lat/lng to a
-// polygon. Customer picks country + polygon explicitly; the
-// pickup address is a separate Google Places field used by the
-// driver to find the exact pickup point. The search submits to
-// /search?countryCode=…&polygonId=…&pickupAt=…&durationHours=…
-// (+pickupAddress, pickupLat, pickupLng if entered).
+// One input: pickup address (Google Places autocomplete). When
+// the customer picks a place we send the address_components to
+// /v1/resolve-address; server figures out the country + best-
+// guess polygon. The customer sees the resolved polygon inline
+// and can override via a small "change" link.
 //
-// Country + polygon lists come from /v1/catalog/* — cached 1h.
+// PHP doesn't expose polygon geometry, so the server uses a
+// fuzzy locality/sublocality → polygon-name match instead of
+// pure point-in-polygon. If we can't match we render the country's
+// polygon list as a fallback dropdown.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Calendar, Clock, ArrowRight, Globe2, Loader2 } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { api, type Country, type Polygon } from '@/lib/api';
-import { GooglePlacesAddress } from '@/components/sections/GooglePlacesAddress';
+import { api, type ResolveAddressResult } from '@/lib/api';
+import { GooglePlacesAddress, type ResolvedPlace } from '@/components/sections/GooglePlacesAddress';
 
 type Mode = 'hours' | 'days';
 
+interface PickedAddress {
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+}
+
 export const HourlySearchForm: React.FC = () => {
   const router = useRouter();
-  const [countries, setCountries] = useState<Country[] | null>(null);
-  const [polygons, setPolygons] = useState<Polygon[] | null>(null);
-  const [countryCode, setCountryCode] = useState<string>('');
-  const [polygonId, setPolygonId] = useState<string>('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [pickupLatLng, setPickupLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [address, setAddress] = useState<PickedAddress | null>(null);
+  const [resolution, setResolution] = useState<ResolveAddressResult | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  // If the auto-match is wrong, customer can override.
+  const [overridePolygonId, setOverridePolygonId] = useState<string | null>(null);
+  const [changing, setChanging] = useState(false);
+
   const [pickupAt, setPickupAt] = useState(defaultPickupAt());
   const [mode, setMode] = useState<Mode>('hours');
   const [hours, setHours] = useState(4);
   const [days, setDays] = useState(1);
-  const [error, setError] = useState<string | null>(null);
 
-  // Load countries once. Use the same API client as the rest of
-  // the app so server-side preferences (revalidate) are honored.
-  useEffect(() => {
-    void api.countries()
-      .then(r => {
-        setCountries(r.countries);
-        // Pin Egypt as the default — primary launch market.
-        const eg = r.countries.find(c => c.code === 'EG');
-        if (eg) setCountryCode(eg.code);
-        else if (r.countries[0]) setCountryCode(r.countries[0].code);
-      })
-      .catch((e: Error) => setError(e.message));
+  const onPlaceResolved = useCallback(async (place: ResolvedPlace) => {
+    setAddress({
+      formattedAddress: place.formattedAddress,
+      lat: place.lat,
+      lng: place.lng,
+    });
+    setResolution(null);
+    setResolveError(null);
+    setOverridePolygonId(null);
+    setChanging(false);
+    setResolving(true);
+    try {
+      const r = await api.resolveAddress({
+        countryCode: place.countryCode,
+        locality: place.locality,
+        sublocality: place.sublocality,
+        lat: place.lat,
+        lng: place.lng,
+        address: place.formattedAddress,
+      });
+      setResolution(r);
+    } catch (e) {
+      setResolveError((e as Error).message);
+    } finally {
+      setResolving(false);
+    }
   }, []);
 
-  // Re-fetch polygons when the country changes.
-  useEffect(() => {
-    if (!countryCode) return;
-    setPolygons(null);
-    setPolygonId('');
-    void api.polygons(countryCode)
-      .then(r => {
-        setPolygons(r.polygons);
-        if (r.polygons[0]) setPolygonId(r.polygons[0].id);
-      })
-      .catch((e: Error) => setError(e.message));
-  }, [countryCode]);
+  // The polygon ID we'll actually submit with — either the matched
+  // one or the customer's override.
+  const effectivePolygonId = useMemo<string | null>(() => {
+    if (overridePolygonId) return overridePolygonId;
+    if (resolution && !resolution.notServiced && resolution.polygon) return resolution.polygon.id;
+    return null;
+  }, [resolution, overridePolygonId]);
 
-  const canSubmit = useMemo(
-    () => Boolean(countryCode && polygonId && pickupAt),
-    [countryCode, polygonId, pickupAt],
-  );
+  const canSubmit = Boolean(address && effectivePolygonId && pickupAt);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || !address || !effectivePolygonId) return;
+    if (!resolution || resolution.notServiced) return;
     const durationHours = mode === 'hours' ? hours : days * 24;
     const params = new URLSearchParams({
-      countryCode,
-      polygonId,
+      countryCode: resolution.country.code,
+      polygonId: effectivePolygonId,
+      pickupAddress: address.formattedAddress,
+      pickupLat: String(address.lat),
+      pickupLng: String(address.lng),
       pickupAt,
       durationHours: String(durationHours),
     });
-    if (pickupAddress) params.set('pickupAddress', pickupAddress);
-    if (pickupLatLng) {
-      params.set('pickupLat', String(pickupLatLng.lat));
-      params.set('pickupLng', String(pickupLatLng.lng));
-    }
     router.push(`/search?${params.toString()}`);
   };
 
@@ -90,50 +103,17 @@ export const HourlySearchForm: React.FC = () => {
     <form
       onSubmit={onSubmit}
       className="rounded-3xl border border-ink-100 bg-white p-4 shadow-soft sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Country" icon={<Globe2 className="h-4 w-4" />}>
-          {countries ? (
-            <select
-              value={countryCode}
-              onChange={e => setCountryCode(e.target.value)}
-              required
-              className="w-full bg-transparent text-base outline-none">
-              {countries.map(c => (
-                <option key={c.code} value={c.code}>{c.name}</option>
-              ))}
-            </select>
-          ) : (
-            <Placeholder text={error ?? 'Loading countries…'} />
-          )}
-        </Field>
-        <Field label="City / pickup area" icon={<MapPin className="h-4 w-4" />}>
-          {polygons === null ? (
-            <Placeholder text="Loading…" />
-          ) : polygons.length === 0 ? (
-            <Placeholder text="No service areas here yet" />
-          ) : (
-            <select
-              value={polygonId}
-              onChange={e => setPolygonId(e.target.value)}
-              required
-              className="w-full bg-transparent text-base outline-none">
-              {polygons.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          )}
-        </Field>
-      </div>
+      <GooglePlacesAddress onResolve={onPlaceResolved} />
 
-      <div className="mt-3">
-        <GooglePlacesAddress
-          countryCode={countryCode || undefined}
-          onChange={(addr, latLng) => {
-            setPickupAddress(addr);
-            setPickupLatLng(latLng);
-          }}
-        />
-      </div>
+      <ResolutionPanel
+        resolution={resolution}
+        resolving={resolving}
+        error={resolveError}
+        candidatesOpen={changing}
+        onChangeClick={() => setChanging(true)}
+        overridePolygonId={overridePolygonId}
+        onOverridePolygon={id => { setOverridePolygonId(id); setChanging(false); }}
+      />
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Pickup date &amp; time" icon={<Calendar className="h-4 w-4" />}>
@@ -180,10 +160,6 @@ export const HourlySearchForm: React.FC = () => {
         </div>
       </div>
 
-      {error ? (
-        <p className="mt-3 text-xs font-medium text-red-600">{error}</p>
-      ) : null}
-
       <button
         type="submit"
         disabled={!canSubmit}
@@ -195,6 +171,102 @@ export const HourlySearchForm: React.FC = () => {
   );
 };
 
+const ResolutionPanel: React.FC<{
+  resolution: ResolveAddressResult | null;
+  resolving: boolean;
+  error: string | null;
+  candidatesOpen: boolean;
+  onChangeClick: () => void;
+  overridePolygonId: string | null;
+  onOverridePolygon: (id: string) => void;
+}> = ({ resolution, resolving, error, candidatesOpen, onChangeClick, overridePolygonId, onOverridePolygon }) => {
+  if (resolving) {
+    return (
+      <div className="mt-3 rounded-2xl border border-ink-100 bg-ink-50/60 px-4 py-3 text-sm text-ink-500">
+        Looking up your service area…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <AlertCircle className="h-4 w-4" />
+        {error}
+      </div>
+    );
+  }
+  if (!resolution) return null;
+
+  if (resolution.notServiced) {
+    return (
+      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="font-semibold">We don't service this location yet</div>
+        <p className="mt-1 text-xs leading-relaxed">
+          {resolution.reason === 'country_not_operated'
+            ? `Sinai Taxi Hourly isn't live in ${resolution.country?.name ?? resolution.countryCode} yet.`
+            : `We're working on adding service areas in ${resolution.country?.name ?? resolution.countryCode}.`}
+        </p>
+      </div>
+    );
+  }
+
+  const candidates = resolution.candidates;
+  const matchedId = overridePolygonId ?? resolution.polygon?.id ?? null;
+  const matched = candidates.find(c => c.id === matchedId) ?? resolution.polygon;
+
+  // No candidates at all in this country.
+  if (candidates.length === 0) {
+    return (
+      <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="font-semibold">No service areas in {resolution.country.name} yet</div>
+      </div>
+    );
+  }
+
+  // Auto-matched (or overridden) → show "Service area: X" with change link.
+  if (matched && !candidatesOpen) {
+    const overridden = Boolean(overridePolygonId);
+    return (
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <span>
+            Service area: <strong>{matched.name}</strong>
+            <span className="ml-1 text-emerald-700/70">· {resolution.country.name}</span>
+          </span>
+        </div>
+        {candidates.length > 1 ? (
+          <button
+            type="button"
+            onClick={onChangeClick}
+            className="text-xs font-semibold text-emerald-700 underline-offset-2 hover:underline">
+            {overridden ? 'Change' : 'Change'}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Manual pick mode — either user clicked "Change" or auto-match failed.
+  return (
+    <div className="mt-3 rounded-2xl border border-ink-200 bg-white px-4 py-3">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
+        <ChevronDown className="h-3.5 w-3.5" />
+        Pick a service area in {resolution.country.name}
+      </div>
+      <select
+        value={matchedId ?? ''}
+        onChange={e => onOverridePolygon(e.target.value)}
+        className="mt-1 w-full bg-transparent text-base outline-none">
+        <option value="" disabled>Select…</option>
+        {candidates.map(p => (
+          <option key={p.id} value={p.id}>{p.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.ReactNode }> = ({ label, icon, children }) => (
   <label className="block rounded-2xl border border-ink-200 bg-white px-4 py-3 focus-within:border-brand-500">
     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
@@ -203,13 +275,6 @@ const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.Re
     </span>
     <div className="mt-1">{children}</div>
   </label>
-);
-
-const Placeholder: React.FC<{ text: string }> = ({ text }) => (
-  <div className="inline-flex items-center gap-2 text-sm text-ink-400">
-    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-    {text}
-  </div>
 );
 
 const ModeBtn: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
