@@ -34,12 +34,36 @@ const loadGoogleMaps = (): Promise<typeof google.maps> => {
       resolve(window.google.maps);
       return;
     }
+    // The classic `libraries=places` query string only auto-loads
+    // the Places library under the legacy (non-`loading=async`)
+    // bootstrap. We use that here because the modern bootstrap
+    // requires `await google.maps.importLibrary('places')` plus a
+    // dynamic-import shim that's overkill for one Autocomplete.
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(KEY)}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(KEY)}&libraries=places&v=weekly`;
     script.async = true;
-    script.onload = () => {
-      if (window.google?.maps?.places) resolve(window.google.maps);
-      else reject(new Error('Google Maps loaded but Places library missing'));
+    script.defer = true;
+    script.onload = async () => {
+      if (window.google?.maps?.places) {
+        resolve(window.google.maps);
+        return;
+      }
+      // If `libraries=places` didn't land for some reason (legacy
+      // bootstrap behaviour can vary by region), fall back to the
+      // modern importLibrary API.
+      try {
+        if (typeof window.google?.maps?.importLibrary === 'function') {
+          await window.google.maps.importLibrary('places');
+          if (window.google.maps.places) {
+            resolve(window.google.maps);
+            return;
+          }
+        }
+      } catch (e) {
+        reject(e as Error);
+        return;
+      }
+      reject(new Error('Google Maps Places library failed to initialise'));
     };
     script.onerror = () => reject(new Error('Google Maps script failed to load'));
     document.head.appendChild(script);
