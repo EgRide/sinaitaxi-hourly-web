@@ -5,10 +5,25 @@
 @layer base {
   html, body {
     @apply bg-white text-ink-900 antialiased;
+    /* Force the document into the light colour scheme so browser-
+       native controls (datetime pickers, dropdown arrows, scrollbars,
+       autofill backgrounds) render in light theme even when the OS
+       is set to dark mode. Until we ship a real dark theme this
+       avoids invisible-text-on-white-background bugs in inputs. */
+    color-scheme: light;
   }
   /* Reduce motion respect for the floaty hero element. */
   @media (prefers-reduced-motion: reduce) {
     .animate-floaty { animation: none; }
+  }
+  /* Force form-control text to ink-900 globally — `bg-transparent`
+     inputs were inheriting the browser's dark-mode default colour
+     and rendering invisible on white card backgrounds. */
+  input, select, textarea {
+    @apply text-ink-900;
+  }
+  input::placeholder, textarea::placeholder {
+    @apply text-ink-400;
   }
 }
 
