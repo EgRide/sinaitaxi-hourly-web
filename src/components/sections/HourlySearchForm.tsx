@@ -14,9 +14,9 @@
 // pure point-in-polygon. If we can't match we render the country's
 // polygon list as a fallback dropdown.
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, type ResolveAddressResult } from '@/lib/api';
 import { GooglePlacesAddress, type ResolvedPlace } from '@/components/sections/GooglePlacesAddress';
@@ -42,7 +42,36 @@ export const HourlySearchForm: React.FC = () => {
   const [pickupAt, setPickupAt] = useState(defaultPickupAt());
   const [mode, setMode] = useState<Mode>('hours');
   const [hours, setHours] = useState(4);
-  const [days, setDays] = useState(1);
+  // Multi-day bookings are an ARRAY of hours-per-day instead of N × 24.
+  // The customer can keep all days the same (sameHoursEveryDay = true)
+  // or set a different value for each day. Total chargeable time is
+  // the sum across days.
+  const [days, setDays] = useState(2);
+  const [sameHoursEveryDay, setSameHoursEveryDay] = useState(true);
+  const [hoursPerDay, setHoursPerDay] = useState<number[]>([4, 4]);
+  const [uniformHours, setUniformHours] = useState(4);
+
+  // Keep the hoursPerDay array length in sync with the days count.
+  // Growing → append the current uniform value; shrinking → truncate.
+  useEffect(() => {
+    setHoursPerDay(prev => {
+      if (prev.length === days) return prev;
+      if (prev.length < days) {
+        const fill = sameHoursEveryDay ? uniformHours : (prev[prev.length - 1] ?? 4);
+        return [...prev, ...Array.from({ length: days - prev.length }, () => fill)];
+      }
+      return prev.slice(0, days);
+    });
+  }, [days, sameHoursEveryDay, uniformHours]);
+
+  // When "Same hours every day" is on, the uniform value is the
+  // source of truth — push it into the array on every change.
+  useEffect(() => {
+    if (!sameHoursEveryDay) return;
+    setHoursPerDay(Array.from({ length: days }, () => uniformHours));
+  }, [sameHoursEveryDay, uniformHours, days]);
+
+  const totalHours = mode === 'hours' ? hours : hoursPerDay.reduce((s, h) => s + h, 0);
 
   const onPlaceResolved = useCallback(async (place: ResolvedPlace) => {
     setAddress({
@@ -86,7 +115,6 @@ export const HourlySearchForm: React.FC = () => {
     e.preventDefault();
     if (!canSubmit || !address || !effectivePolygonId) return;
     if (!resolution || resolution.notServiced) return;
-    const durationHours = mode === 'hours' ? hours : days * 24;
     const params = new URLSearchParams({
       countryCode: resolution.country.code,
       polygonId: effectivePolygonId,
@@ -94,8 +122,15 @@ export const HourlySearchForm: React.FC = () => {
       pickupLat: String(address.lat),
       pickupLng: String(address.lng),
       pickupAt,
-      durationHours: String(durationHours),
+      durationHours: String(totalHours),
     });
+    if (mode === 'days') {
+      // hoursPerDay is a CSV like "4,4,5,4,4" — total chargeable
+      // time is the sum, but the partner needs the per-day shape
+      // so they know when to dispatch the driver each morning.
+      params.set('days', String(days));
+      params.set('hoursPerDay', hoursPerDay.join(','));
+    }
     router.push(`/search?${params.toString()}`);
   };
 
@@ -115,7 +150,7 @@ export const HourlySearchForm: React.FC = () => {
         onOverridePolygon={id => { setOverridePolygonId(id); setChanging(false); }}
       />
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3">
         <Field label="Pickup date &amp; time" icon={<Calendar className="h-4 w-4" />}>
           <input
             type="datetime-local"
@@ -125,40 +160,23 @@ export const HourlySearchForm: React.FC = () => {
             required
           />
         </Field>
-        <div className="rounded-2xl border border-ink-200 bg-white p-2">
-          <div className="flex items-center justify-between gap-2 px-2">
-            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
-              <Clock className="h-3.5 w-3.5" />
-              Duration
-            </div>
-            <div className="inline-flex rounded-full border border-ink-200 bg-white p-0.5 text-xs">
-              <ModeBtn active={mode === 'hours'} onClick={() => setMode('hours')}>Hours</ModeBtn>
-              <ModeBtn active={mode === 'days'} onClick={() => setMode('days')}>Days</ModeBtn>
-            </div>
-          </div>
-          <div className="mt-1.5 px-2">
-            {mode === 'hours' ? (
-              <select
-                value={hours}
-                onChange={e => setHours(Number(e.target.value))}
-                className="w-full bg-transparent text-base outline-none">
-                {Array.from({ length: 23 }, (_, i) => i + 1).map(h => (
-                  <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>
-                ))}
-              </select>
-            ) : (
-              <select
-                value={days}
-                onChange={e => setDays(Number(e.target.value))}
-                className="w-full bg-transparent text-base outline-none">
-                {Array.from({ length: 14 }, (_, i) => i + 1).map(d => (
-                  <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
       </div>
+
+      <DurationPicker
+        mode={mode}
+        onModeChange={setMode}
+        hours={hours}
+        onHoursChange={setHours}
+        days={days}
+        onDaysChange={setDays}
+        sameHoursEveryDay={sameHoursEveryDay}
+        onSameHoursEveryDayChange={setSameHoursEveryDay}
+        uniformHours={uniformHours}
+        onUniformHoursChange={setUniformHours}
+        hoursPerDay={hoursPerDay}
+        onHoursPerDayChange={setHoursPerDay}
+        totalHours={totalHours}
+      />
 
       <button
         type="submit"
@@ -263,6 +281,136 @@ const ResolutionPanel: React.FC<{
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
+    </div>
+  );
+};
+
+interface DurationPickerProps {
+  mode: Mode;
+  onModeChange: (m: Mode) => void;
+  hours: number;
+  onHoursChange: (h: number) => void;
+  days: number;
+  onDaysChange: (d: number) => void;
+  sameHoursEveryDay: boolean;
+  onSameHoursEveryDayChange: (v: boolean) => void;
+  uniformHours: number;
+  onUniformHoursChange: (h: number) => void;
+  hoursPerDay: number[];
+  onHoursPerDayChange: (arr: number[]) => void;
+  totalHours: number;
+}
+
+const DurationPicker: React.FC<DurationPickerProps> = ({
+  mode, onModeChange,
+  hours, onHoursChange,
+  days, onDaysChange,
+  sameHoursEveryDay, onSameHoursEveryDayChange,
+  uniformHours, onUniformHoursChange,
+  hoursPerDay, onHoursPerDayChange,
+  totalHours,
+}) => {
+  const setOneDay = (i: number, value: number) => {
+    const next = [...hoursPerDay];
+    next[i] = value;
+    onHoursPerDayChange(next);
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl border border-ink-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
+          <Clock className="h-3.5 w-3.5" />
+          Duration
+        </div>
+        <div className="inline-flex rounded-full border border-ink-200 bg-white p-0.5 text-xs">
+          <ModeBtn active={mode === 'hours'} onClick={() => onModeChange('hours')}>Hours</ModeBtn>
+          <ModeBtn active={mode === 'days'} onClick={() => onModeChange('days')}>Days</ModeBtn>
+        </div>
+      </div>
+
+      {mode === 'hours' ? (
+        <div className="mt-3">
+          <select
+            value={hours}
+            onChange={e => onHoursChange(Number(e.target.value))}
+            className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-500">
+            {Array.from({ length: 23 }, (_, i) => i + 1).map(h => (
+              <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'}</option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-ink-100 bg-ink-50/40 px-3 py-2">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-500">
+                Number of days
+              </span>
+              <select
+                value={days}
+                onChange={e => onDaysChange(Number(e.target.value))}
+                className="mt-1 w-full bg-transparent text-base outline-none">
+                {Array.from({ length: 14 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-xl border border-ink-100 bg-ink-50/40 px-3 py-2">
+              <label className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-ink-500">
+                <span>Same hours every day</span>
+                <input
+                  type="checkbox"
+                  checked={sameHoursEveryDay}
+                  onChange={e => onSameHoursEveryDayChange(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-brand-500 focus:ring-brand-500"
+                />
+              </label>
+              {sameHoursEveryDay ? (
+                <select
+                  value={uniformHours}
+                  onChange={e => onUniformHoursChange(Number(e.target.value))}
+                  className="mt-1 w-full bg-transparent text-base outline-none">
+                  {Array.from({ length: 23 }, (_, i) => i + 1).map(h => (
+                    <option key={h} value={h}>{h} {h === 1 ? 'hour' : 'hours'} / day</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1 text-xs text-ink-500">Pick hours per day below.</p>
+              )}
+            </div>
+          </div>
+
+          {!sameHoursEveryDay ? (
+            <div className="rounded-xl border border-ink-100 bg-white">
+              <div className="flex items-center gap-1.5 border-b border-ink-100 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-ink-500">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Per-day schedule
+              </div>
+              <ul className="max-h-64 divide-y divide-ink-100 overflow-auto">
+                {hoursPerDay.map((h, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="text-sm font-medium text-ink-700">Day {i + 1}</span>
+                    <select
+                      value={h}
+                      onChange={e => setOneDay(i, Number(e.target.value))}
+                      className="rounded-lg border border-ink-200 bg-white px-2 py-1 text-sm outline-none focus:border-brand-500">
+                      {Array.from({ length: 23 }, (_, x) => x + 1).map(opt => (
+                        <option key={opt} value={opt}>{opt} {opt === 1 ? 'hour' : 'hours'}</option>
+                      ))}
+                    </select>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="flex items-center justify-between rounded-xl bg-brand-50 px-3 py-2 text-sm">
+            <span className="font-semibold text-brand-800">Total chargeable time</span>
+            <span className="font-bold text-brand-900">{totalHours} {totalHours === 1 ? 'hour' : 'hours'}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

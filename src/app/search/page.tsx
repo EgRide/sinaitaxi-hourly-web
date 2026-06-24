@@ -14,6 +14,8 @@ type SP = {
   durationHours?: string;
   pickupLat?: string;
   pickupLng?: string;
+  days?: string;
+  hoursPerDay?: string;
 };
 type Params = Promise<SP>;
 
@@ -39,9 +41,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
   }
 
   const durationHours = sp.durationHours ? Number(sp.durationHours) : null;
+  const hoursPerDay = sp.hoursPerDay
+    ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
+    : null;
+  const days = sp.days ? Number(sp.days) : (hoursPerDay?.length ?? null);
   const durationLabel = durationHours
-    ? durationHours % 24 === 0 && durationHours >= 24
-      ? `${durationHours / 24} day${durationHours === 24 ? '' : 's'}`
+    ? hoursPerDay && days
+      ? `${durationHours} hours across ${days} day${days === 1 ? '' : 's'}`
       : `${durationHours} hour${durationHours === 1 ? '' : 's'}`
     : '—';
 
@@ -67,6 +73,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
             <Row label="Pickup coords" value={`${Number(sp.pickupLat).toFixed(5)}, ${Number(sp.pickupLng).toFixed(5)}`} />
           ) : null}
         </dl>
+
+        {hoursPerDay && hoursPerDay.length > 0 ? (
+          <div className="mt-6 rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
+            <h2 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h2>
+            <ul className="mt-3 divide-y divide-ink-100">
+              {hoursPerDay.map((h, i) => (
+                <li key={i} className="flex items-center justify-between py-2 text-sm">
+                  <span className="font-semibold text-ink-700">Day {i + 1}</span>
+                  <span className="text-ink-900">{h} hour{h === 1 ? '' : 's'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="mt-8 rounded-3xl border border-dashed border-ink-200 bg-ink-50/50 p-6 text-center text-sm text-ink-600">
           <p className="font-semibold text-ink-900">Offers will appear here.</p>
