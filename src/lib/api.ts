@@ -90,6 +90,46 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+
+  offers: (input: { polygonId: string; durationHours: number; pickupAt: string }) => {
+    const qs = new URLSearchParams({
+      polygonId: input.polygonId,
+      durationHours: String(input.durationHours),
+      pickupAt: input.pickupAt,
+    });
+    return request<OffersResult>(`/v1/offers?${qs.toString()}`);
+  },
 };
+
+export interface OfferCard {
+  offerKey: string;
+  ruleId: string;
+  ruleName: string | null;
+  partnerPhpId: string;
+  vehicleClass: { slug: string; label: string; description: string; seats: string };
+  hourlyRate: number;
+  totalPrice: number;
+  currency: string;
+  includedKm: number;
+  includedKmPerHour: number;
+  overageRatePerKm: number;
+  marginHours: number;
+  minHours: number;
+  maxHours: number;
+}
+
+export interface OffersResult {
+  query: {
+    polygonId: string;
+    polygonName: string;
+    countryCode: string;
+    countryName?: string;
+    durationHours: number;
+    pickupAt: string;
+    currency?: string;
+    overageRatePerKm?: number;
+  };
+  offers: OfferCard[];
+}
 
 export { ApiError };
