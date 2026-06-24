@@ -1,37 +1,190 @@
-// Phase 2 placeholder. Customer arrives here from the Select
-// button on /search with the full query context + offerKey. The
-// real Stripe Elements flow lands in Phase 2.
+// Checkout (Phase 2). Customer arrives from /search with the full
+// query context + offerKey. We re-fetch /v1/offers server-side
+// to surface the chosen card's summary (price, included KM, class)
+// next to the form. The CheckoutForm client component owns the
+// Stripe Elements flow + redirects to /orders/[id] on success.
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { Car, Clock, Gauge } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
+import { api, type OfferCard } from '@/lib/api';
+import { CheckoutForm } from './CheckoutForm';
 
-type Params = Promise<Record<string, string | undefined>>;
+type SP = {
+  countryCode?: string;
+  polygonId?: string;
+  pickupAddress?: string;
+  pickupAt?: string;
+  durationHours?: string;
+  pickupLat?: string;
+  pickupLng?: string;
+  days?: string;
+  hoursPerDay?: string;
+  offerKey?: string;
+};
+type Params = Promise<SP>;
+
+const formatPrice = (n: number, currency: string): string => {
+  try {
+    return new Intl.NumberFormat('en', { style: 'currency', currency }).format(n);
+  } catch {
+    return `${currency} ${n.toFixed(2)}`;
+  }
+};
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Params }) {
   const sp = await searchParams;
+  const offerKey = sp.offerKey;
+  const polygonId = sp.polygonId;
+  const pickupAt = sp.pickupAt;
+  const durationHours = sp.durationHours ? Number(sp.durationHours) : null;
+  const countryCode = sp.countryCode;
+  const pickupAddress = sp.pickupAddress;
+  const hoursPerDay = sp.hoursPerDay
+    ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
+    : null;
+
+  // Required inputs missing → bounce to /search so the customer
+  // restarts the funnel rather than seeing a broken page.
+  if (!offerKey || !polygonId || !pickupAt || !durationHours || !countryCode || !pickupAddress) {
+    redirect('/');
+  }
+
+  // Re-fetch the offers list and find the chosen card by offerKey.
+  // We deliberately don't trust query params for price/class — the
+  // backend's /v1/checkout will re-resolve the same data, but
+  // showing the card next to the form needs us to call /v1/offers
+  // once. If the offer disappeared (rule deactivated mid-funnel)
+  // we surface a clear restart prompt.
+  let offer: OfferCard | null = null;
+  let offersError: string | null = null;
+  try {
+    const r = await api.offers({ polygonId, durationHours, pickupAt });
+    offer = r.offers.find(o => o.offerKey === offerKey) ?? null;
+  } catch (e) {
+    offersError = (e as Error).message;
+  }
+
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-3xl px-6 py-16">
+      <main className="mx-auto max-w-5xl px-6 py-12">
         <span className="chip">Checkout</span>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tighter">Almost there</h1>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tighter">Complete your booking</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Phase 2 (Stripe checkout) is next. The selected offer key and your full search context
-          travel here on the URL, so the real flow can be wired without changing anything upstream.
+          You're paying the partner directly — Sinai Taxi processes the payment securely via Stripe.
         </p>
 
-        <div className="mt-8 rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Selected offer</h2>
-          <p className="mt-2 font-mono text-xs break-all text-ink-700">{sp.offerKey ?? '—'}</p>
-        </div>
+        {offersError ? (
+          <p className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {offersError}
+          </p>
+        ) : !offer ? (
+          <div className="mt-8 rounded-3xl border border-dashed border-ink-200 bg-ink-50/60 p-8 text-center">
+            <h2 className="text-lg font-bold tracking-tight">The offer you picked is no longer available</h2>
+            <p className="mt-2 text-sm text-ink-600">
+              The partner may have edited their rule or your pickup time has passed their notice window.
+              Start a new search to see live offers.
+            </p>
+            <Link href="/" className="btn-primary mt-5">Start a new search</Link>
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
+              <CheckoutForm
+                offer={offer}
+                countryCode={countryCode!}
+                polygonId={polygonId!}
+                pickupAt={pickupAt!}
+                pickupAddress={pickupAddress!}
+                pickupLat={sp.pickupLat ? Number(sp.pickupLat) : null}
+                pickupLng={sp.pickupLng ? Number(sp.pickupLng) : null}
+                durationHours={durationHours!}
+                hoursPerDay={hoursPerDay}
+              />
+            </div>
 
-        <Link href="/" className="btn-secondary mt-6">
-          Start a new search
-        </Link>
+            <aside>
+              <OfferSummary offer={offer} pickupAt={pickupAt!} pickupAddress={pickupAddress!} hoursPerDay={hoursPerDay} />
+            </aside>
+          </div>
+        )}
       </main>
       <SiteFooter />
       <WhatsAppFab />
     </>
   );
 }
+
+const OfferSummary: React.FC<{
+  offer: OfferCard;
+  pickupAt: string;
+  pickupAddress: string;
+  hoursPerDay: number[] | null;
+}> = ({ offer, pickupAt, pickupAddress, hoursPerDay }) => (
+  <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
+    <div className="flex items-center gap-3 border-b border-ink-100 pb-4">
+      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+        <Car className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="text-lg font-bold">{offer.vehicleClass.label}</div>
+        <div className="text-xs text-ink-500">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</div>
+      </div>
+    </div>
+    {offer.ruleName ? (
+      <p className="mt-3 text-xs text-ink-500">
+        Operated by <span className="font-medium text-ink-700">{offer.ruleName}</span>
+      </p>
+    ) : null}
+    <dl className="mt-4 space-y-3 text-sm">
+      <Row label="Pickup" value={new Date(pickupAt).toLocaleString()} />
+      <Row label="Address" value={pickupAddress} />
+      <Row label="Duration" value={
+        hoursPerDay && hoursPerDay.length > 1
+          ? `${hoursPerDay.reduce((s,h)=>s+h,0)}h across ${hoursPerDay.length} days`
+          : null
+      } />
+      <Row label="Included" value={
+        <span className="inline-flex items-center gap-1.5">
+          <Gauge className="h-3.5 w-3.5" />
+          {offer.includedKm} km
+        </span>
+      } />
+      <Row label="Overage" value={`${formatPrice(offer.overageRatePerKm, offer.currency)} / km`} />
+    </dl>
+    <div className="mt-5 flex items-end justify-between border-t border-ink-100 pt-4">
+      <span className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider text-ink-500">
+        <Clock className="h-3.5 w-3.5" />
+        Total
+      </span>
+      <span className="text-2xl font-extrabold tracking-tightest">
+        {formatPrice(offer.totalPrice, offer.currency)}
+      </span>
+    </div>
+    {hoursPerDay && hoursPerDay.length > 1 ? (
+      <div className="mt-5">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
+        <ul className="mt-2 flex flex-wrap gap-2 text-xs">
+          {hoursPerDay.map((h, i) => (
+            <li key={i} className="rounded-full bg-ink-100 px-3 py-1 font-medium text-ink-800">
+              Day {i + 1} · {h}h
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null}
+  </div>
+);
+
+const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <dt className="text-[10px] font-bold uppercase tracking-wider text-ink-500">{label}</dt>
+      <dd className="text-right text-sm font-medium text-ink-800">{value}</dd>
+    </div>
+  );
+};

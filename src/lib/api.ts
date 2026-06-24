@@ -99,7 +99,72 @@ export const api = {
     });
     return request<OffersResult>(`/v1/offers?${qs.toString()}`);
   },
+
+  checkout: (input: CheckoutInput) =>
+    request<CheckoutResult>('/v1/checkout', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  booking: (id: string) =>
+    request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}`),
 };
+
+export interface CheckoutInput {
+  offerKey: string;
+  countryCode: string;
+  polygonId: string;
+  pickupAt: string;
+  durationHours: number;
+  hoursPerDay?: number[] | null;
+  pickupAddress: string;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  customerEmail: string;
+  customerName: string;
+  customerPhone?: string | null;
+  agreedToTerms: true;
+}
+
+export interface CheckoutResult {
+  bookingId: string;
+  clientSecret: string;
+  currency: string;
+  retailPrice: number;
+}
+
+export type BookingStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'started'
+  | 'completed'
+  | 'settled'
+  | 'cancelled'
+  | 'refunded'
+  | 'no_show';
+
+export interface BookingDetail {
+  id: string;
+  status: BookingStatus;
+  customerEmail: string;
+  customerName: string | null;
+  countryCode: string;
+  polygonId: string;
+  polygonName: string;
+  vehicleClass: { slug: string; label: string; description: string; seats: string };
+  ruleName: string | null;
+  pickupAt: string;
+  pickupAddress: string;
+  durationHours: number;
+  hoursPerDay: number[] | null;
+  includedKm: number;
+  retailPrice: number;
+  currency: string;
+  createdAt: string;
+  confirmedAt: string | null;
+  cancelledAt: string | null;
+  stripeClientSecret: string | null;
+}
 
 export interface OfferCard {
   offerKey: string;
