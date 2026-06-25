@@ -1,13 +1,23 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const SiteFooter: React.FC = () => (
   <footer className="mt-32 bg-brand-900 text-ink-300">
     <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-4">
       <div className="md:col-span-2">
-        <div className="text-2xl font-extrabold tracking-tighter text-white">
-          Sinai<span className="text-brand-400">Taxi</span> Hourly
+        <div className="flex items-center gap-3">
+          <Image
+            src="/sinaitaxi-logo-light.png"
+            alt="SinaiTaxi"
+            width={180}
+            height={32}
+            className="h-8 w-auto"
+          />
+          <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/80">
+            Hourly
+          </span>
         </div>
-        <p className="mt-3 max-w-md text-sm leading-relaxed">
+        <p className="mt-4 max-w-md text-sm leading-relaxed">
           Chauffeured cars by the hour, half-day, full-day, or multi-day.
           Vetted partners, transparent pricing, one Sinai Taxi account.
         </p>

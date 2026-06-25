@@ -202,7 +202,26 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
         <Row label="Reference" value={<span className="font-mono">{booking.id}</span>} />
         <Row label="Total paid" value={<span className="font-bold text-brand-700">{formatPrice(booking.retailPrice, booking.currency)}</span>} />
       </dl>
-      {booking.hoursPerDay && booking.hoursPerDay.length > 1 ? (
+      {booking.daySchedule && booking.daySchedule.length > 1 ? (
+        <div className="mt-5">
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
+          <ul className="mt-2 space-y-1.5 text-xs">
+            {booking.daySchedule.map((d, i) => {
+              const dt = new Date(`${d.date}T${d.time}`);
+              const label = dt.toLocaleString('en', {
+                weekday: 'short', day: 'numeric', month: 'short',
+                hour: 'numeric', minute: '2-digit',
+              });
+              return (
+                <li key={i} className="flex items-center justify-between gap-3 rounded-xl bg-ink-100 px-3 py-1.5 font-medium text-ink-800">
+                  <span>Day {i + 1} · {label}</span>
+                  <span className="font-bold">{d.hours}h</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : booking.hoursPerDay && booking.hoursPerDay.length > 1 ? (
         <div className="mt-5">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
           <ul className="mt-2 flex flex-wrap gap-2 text-xs">

@@ -29,6 +29,8 @@ const stripePromise = (): Promise<Stripe | null> => {
   return _stripe;
 };
 
+interface ScheduledDay { date: string; time: string; hours: number; }
+
 interface Props {
   offer: OfferCard;
   // Search context passed through from /search.
@@ -40,6 +42,7 @@ interface Props {
   pickupLng: number | null;
   durationHours: number;
   hoursPerDay: number[] | null;
+  daySchedule: ScheduledDay[] | null;
 }
 
 const formatPrice = (n: number, currency: string): string => {
@@ -77,6 +80,7 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         pickupAt: props.pickupAt,
         durationHours: props.durationHours,
         hoursPerDay: props.hoursPerDay,
+        daySchedule: props.daySchedule,
         pickupAddress: props.pickupAddress,
         pickupLat: props.pickupLat,
         pickupLng: props.pickupLng,

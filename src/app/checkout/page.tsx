@@ -22,9 +22,27 @@ type SP = {
   pickupLng?: string;
   days?: string;
   hoursPerDay?: string;
+  daySchedule?: string;
   offerKey?: string;
 };
 type Params = Promise<SP>;
+
+interface ScheduledDay { date: string; time: string; hours: number; }
+
+const parseDaySchedule = (raw: string | undefined): ScheduledDay[] | null => {
+  if (!raw) return null;
+  const out: ScheduledDay[] = [];
+  for (const entry of raw.split(';')) {
+    const [dt, h] = entry.split(',');
+    if (!dt || !h) continue;
+    const [date, time] = dt.split('T');
+    if (!date || !time) continue;
+    const hours = Number(h);
+    if (!Number.isFinite(hours) || hours <= 0) continue;
+    out.push({ date, time, hours });
+  }
+  return out.length ? out : null;
+};
 
 const formatPrice = (n: number, currency: string): string => {
   try {
@@ -42,9 +60,12 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Par
   const durationHours = sp.durationHours ? Number(sp.durationHours) : null;
   const countryCode = sp.countryCode;
   const pickupAddress = sp.pickupAddress;
-  const hoursPerDay = sp.hoursPerDay
-    ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
-    : null;
+  const daySchedule = parseDaySchedule(sp.daySchedule);
+  const hoursPerDay = daySchedule
+    ? daySchedule.map(d => d.hours)
+    : (sp.hoursPerDay
+      ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
+      : null);
 
   // Required inputs missing → bounce to /search so the customer
   // restarts the funnel rather than seeing a broken page.
@@ -103,11 +124,12 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Par
                 pickupLng={sp.pickupLng ? Number(sp.pickupLng) : null}
                 durationHours={durationHours!}
                 hoursPerDay={hoursPerDay}
+                daySchedule={daySchedule}
               />
             </div>
 
             <aside>
-              <OfferSummary offer={offer} pickupAt={pickupAt!} pickupAddress={pickupAddress!} hoursPerDay={hoursPerDay} />
+              <OfferSummary offer={offer} pickupAt={pickupAt!} pickupAddress={pickupAddress!} hoursPerDay={hoursPerDay} daySchedule={daySchedule} />
             </aside>
           </div>
         )}
@@ -123,7 +145,8 @@ const OfferSummary: React.FC<{
   pickupAt: string;
   pickupAddress: string;
   hoursPerDay: number[] | null;
-}> = ({ offer, pickupAt, pickupAddress, hoursPerDay }) => (
+  daySchedule: ScheduledDay[] | null;
+}> = ({ offer, pickupAt, pickupAddress, hoursPerDay, daySchedule }) => (
   <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
     <div className="flex items-center gap-3 border-b border-ink-100 pb-4">
       <div className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-700">
@@ -164,7 +187,23 @@ const OfferSummary: React.FC<{
         {formatPrice(offer.totalPrice, offer.currency)}
       </span>
     </div>
-    {hoursPerDay && hoursPerDay.length > 1 ? (
+    {daySchedule && daySchedule.length > 1 ? (
+      <div className="mt-5">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
+        <ul className="mt-2 space-y-1.5 text-xs">
+          {daySchedule.map((d, i) => {
+            const dt = new Date(`${d.date}T${d.time}`);
+            const label = dt.toLocaleString('en', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+            return (
+              <li key={i} className="flex items-center justify-between gap-3 rounded-xl bg-ink-100 px-3 py-1.5 font-medium text-ink-800">
+                <span>Day {i + 1} · {label}</span>
+                <span className="font-bold">{d.hours}h</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ) : hoursPerDay && hoursPerDay.length > 1 ? (
       <div className="mt-5">
         <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
         <ul className="mt-2 flex flex-wrap gap-2 text-xs">

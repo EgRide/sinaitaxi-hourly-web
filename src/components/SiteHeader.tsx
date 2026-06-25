@@ -5,6 +5,7 @@
 // light surfaces on every other route.
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 
@@ -20,15 +21,16 @@ export const SiteHeader: React.FC = () => {
   return (
     <header className="sticky top-0 z-30 border-b border-ink-100/60 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
-        <Link href="/" className="group inline-flex items-center gap-2.5">
-          <span className="relative grid h-8 w-8 place-items-center overflow-hidden rounded-xl bg-brand-900 text-white shadow-sm">
-            <span className="absolute inset-0 bg-gradient-to-br from-brand-500/40 via-transparent to-transparent transition group-hover:opacity-80" />
-            <span className="relative text-[11px] font-black tracking-tighter">ST</span>
-          </span>
-          <span className="text-base font-extrabold tracking-tightest text-ink-900">
-            Sinai<span className="text-brand-600">Taxi</span>
-          </span>
-          <span className="ml-0.5 rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-ink-600">
+        <Link href="/" className="inline-flex items-center gap-2.5" aria-label="SinaiTaxi Hourly">
+          <Image
+            src="/sinaitaxi-logo-dark.png"
+            alt="SinaiTaxi"
+            width={132}
+            height={24}
+            priority
+            className="h-6 w-auto"
+          />
+          <span className="rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-ink-600">
             Hourly
           </span>
         </Link>
@@ -48,7 +50,7 @@ export const SiteHeader: React.FC = () => {
             );
           })}
           <Link
-            href="#search"
+            href="/#search"
             className="rounded-full bg-brand-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-brand-700">
             Book now
           </Link>

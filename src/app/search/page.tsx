@@ -24,8 +24,28 @@ type SP = {
   pickupLng?: string;
   days?: string;
   hoursPerDay?: string;
+  // CSV of "YYYY-MM-DDTHH:MM,H" tuples — one per day — carrying
+  // the full per-day schedule from the search form into checkout.
+  daySchedule?: string;
 };
 type Params = Promise<SP>;
+
+interface ScheduledDay { date: string; time: string; hours: number; }
+
+const parseDaySchedule = (raw: string | undefined): ScheduledDay[] | null => {
+  if (!raw) return null;
+  const out: ScheduledDay[] = [];
+  for (const entry of raw.split(';')) {
+    const [dt, h] = entry.split(',');
+    if (!dt || !h) continue;
+    const [date, time] = dt.split('T');
+    if (!date || !time) continue;
+    const hours = Number(h);
+    if (!Number.isFinite(hours) || hours <= 0) continue;
+    out.push({ date, time, hours });
+  }
+  return out.length ? out : null;
+};
 
 export const metadata: Metadata = {
   title: 'Search results',
@@ -60,9 +80,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
   const sp = await searchParams;
 
   const durationHours = sp.durationHours ? Number(sp.durationHours) : null;
-  const hoursPerDay = sp.hoursPerDay
-    ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
-    : null;
+  const daySchedule = parseDaySchedule(sp.daySchedule);
+  const hoursPerDay = daySchedule
+    ? daySchedule.map(d => d.hours)
+    : (sp.hoursPerDay
+      ? sp.hoursPerDay.split(',').map(s => Number(s)).filter(n => Number.isFinite(n) && n > 0)
+      : null);
   const days = sp.days ? Number(sp.days) : (hoursPerDay?.length ?? null);
 
   let offersResult: OffersResult | null = null;
@@ -117,7 +140,22 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
               </Link>
             </div>
 
-            {hoursPerDay && hoursPerDay.length > 1 ? (
+            {daySchedule && daySchedule.length > 1 ? (
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {daySchedule.map((d, i) => {
+                  const dt = new Date(`${d.date}T${d.time}`);
+                  const label = dt.toLocaleString('en', {
+                    weekday: 'short', day: 'numeric', month: 'short',
+                    hour: 'numeric', minute: '2-digit',
+                  });
+                  return (
+                    <li key={i} className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">
+                      Day {i + 1} · {label} · {d.hours}h
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : hoursPerDay && hoursPerDay.length > 1 ? (
               <ul className="mt-5 flex flex-wrap gap-2">
                 {hoursPerDay.map((h, i) => (
                   <li key={i} className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">

@@ -129,6 +129,10 @@ export interface CheckoutInput {
   pickupAt: string;
   durationHours: number;
   hoursPerDay?: number[] | null;
+  // Full per-day schedule (date + time + hours). When present the
+  // backend stores it on the Booking for the partner's dispatch
+  // view; `hoursPerDay` stays in sync as a derived field.
+  daySchedule?: { date: string; time: string; hours: number }[] | null;
   pickupAddress: string;
   pickupLat?: number | null;
   pickupLng?: number | null;
@@ -169,6 +173,7 @@ export interface BookingDetail {
   pickupAddress: string;
   durationHours: number;
   hoursPerDay: number[] | null;
+  daySchedule: { date: string; time: string; hours: number }[] | null;
   includedKm: number;
   retailPrice: number;
   currency: string;
