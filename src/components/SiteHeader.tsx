@@ -16,6 +16,7 @@ export const SiteHeader: React.FC = () => (
         <Link href="/how-it-works" className="hover:text-ink-900">How it works</Link>
         <Link href="/account" className="hover:text-ink-900">My rentals</Link>
         <Link href="/partner" className="hover:text-ink-900">Partner login</Link>
+        <Link href="/admin" className="hover:text-ink-900">Ops</Link>
         <Link href="https://esim.sinaitaxi.com" className="hover:text-ink-900">eSIM</Link>
       </nav>
     </div>
