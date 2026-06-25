@@ -1,14 +1,18 @@
-// Marketplace results page. Server-fetches /v1/offers and renders
-// one card per (active rule × vehicle class) matching the query.
-// "Select" links into checkout (Phase 2 will replace the placeholder).
+// Marketplace results page. Server-fetches /v1/offers, renders a
+// sticky context bar with the trip summary, then a list of offer
+// cards with editorial polish — large class imagery, partner
+// strip, expanded specs, prominent Select.
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
-import { Car, Clock, MapPin, Gauge, ArrowRight, AlertCircle, Tag } from 'lucide-react';
+import {
+  Car, Clock, MapPin, Gauge, ArrowRight, AlertCircle,
+  Tag, ShieldCheck, Receipt, Star, Users, Briefcase,
+} from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { api, type OfferCard, type OffersResult } from '@/lib/api';
-import { cn } from '@/lib/cn';
 
 type SP = {
   countryCode?: string;
@@ -27,12 +31,29 @@ export const metadata: Metadata = {
   title: 'Search results',
 };
 
+// Editorial photography per vehicle class — same set as the homepage
+// so the marketplace reads as one product.
+const CLASS_PHOTO: Record<string, string> = {
+  standard: 'photo-1494976388531-d1058494cdd8',
+  premium:  'photo-1503376780353-7e6692767b70',
+  suv:      'photo-1605559424843-9e4c228bf1c2',
+  van:      'photo-1571127236794-81c0bbfe1ce3',
+};
+
 const formatPrice = (n: number, currency: string): string => {
   try {
     return new Intl.NumberFormat('en', { style: 'currency', currency }).format(n);
   } catch {
     return `${currency} ${n.toFixed(2)}`;
   }
+};
+
+const formatDateTime = (iso: string): string => {
+  const d = new Date(iso);
+  return d.toLocaleString('en', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: 'numeric', minute: '2-digit',
+  });
 };
 
 export default async function SearchPage({ searchParams }: { searchParams: Params }) {
@@ -62,59 +83,79 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
   const countryName = offersResult?.query.countryName ?? offersResult?.query.countryCode ?? '—';
   const offers = offersResult?.offers ?? [];
 
-  const durationLabel = durationHours
-    ? hoursPerDay && days
-      ? `${durationHours} hours across ${days} day${days === 1 ? '' : 's'}`
-      : `${durationHours} hour${durationHours === 1 ? '' : 's'}`
-    : '—';
-
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <span className="chip">Search results</span>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tighter">
-              Hourly rentals in <span className="text-brand-600">{polygonName}</span>
-            </h1>
-            <p className="mt-1 text-sm text-ink-500">
-              {sp.pickupAddress ? <>Pickup at <span className="font-medium text-ink-800">{sp.pickupAddress}</span> · </> : null}
-              {sp.pickupAt ? new Date(sp.pickupAt).toLocaleString() : '—'} · {durationLabel} · {countryName}
-            </p>
-          </div>
-          <Link href="/" className="btn-secondary !py-2 !px-4 !text-sm">
-            New search
-          </Link>
-        </div>
+      <main className="bg-ink-50/40 min-h-[60vh]">
+        {/* Context bar */}
+        <section className="border-b border-ink-100 bg-white">
+          <div className="mx-auto max-w-6xl px-6 py-7">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Marketplace</span>
+                <h1 className="mt-2 truncate text-3xl font-extrabold tracking-tightest sm:text-4xl">
+                  Offers in <span className="text-brand-700">{polygonName}</span>
+                </h1>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-600">
+                  {sp.pickupAddress ? (
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-ink-400" /> {sp.pickupAddress}</span>
+                  ) : null}
+                  {sp.pickupAt ? (
+                    <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-ink-400" /> {formatDateTime(sp.pickupAt)}</span>
+                  ) : null}
+                  <span className="inline-flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-ink-400" />
+                    {durationHours} {durationHours === 1 ? 'hour' : 'hours'}
+                    {hoursPerDay && days ? ` · ${days} days` : ''}
+                  </span>
+                  <span className="hidden text-ink-400 lg:inline">·</span>
+                  <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-ink-400" /> {countryName}</span>
+                </div>
+              </div>
+              <Link href="/" className="inline-flex items-center gap-1.5 self-start rounded-full border border-ink-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-ink-700 transition hover:border-ink-300 hover:text-ink-900 lg:self-auto">
+                Edit search
+              </Link>
+            </div>
 
-        {hoursPerDay && hoursPerDay.length > 1 ? (
-          <div className="mt-6 rounded-3xl border border-ink-100 bg-white px-5 py-4 shadow-soft">
-            <h2 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h2>
-            <ul className="mt-2 flex flex-wrap gap-2 text-xs">
-              {hoursPerDay.map((h, i) => (
-                <li key={i} className="rounded-full bg-ink-100 px-3 py-1 font-medium text-ink-800">
-                  Day {i + 1} · {h} {h === 1 ? 'hour' : 'hours'}
-                </li>
-              ))}
-            </ul>
+            {hoursPerDay && hoursPerDay.length > 1 ? (
+              <ul className="mt-5 flex flex-wrap gap-2">
+                {hoursPerDay.map((h, i) => (
+                  <li key={i} className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">
+                    Day {i + 1} · {h} {h === 1 ? 'hour' : 'hours'}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-        ) : null}
+        </section>
 
-        {fetchError ? (
-          <ErrorPanel message={fetchError} />
-        ) : offers.length === 0 ? (
-          <EmptyState polygonName={polygonName} countryName={countryName} />
-        ) : (
-          <div className="mt-8 space-y-3">
-            <p className="text-sm text-ink-500">
-              {offers.length} {offers.length === 1 ? 'offer' : 'offers'} available · sorted by price
-            </p>
-            {offers.map(offer => (
-              <Card key={offer.offerKey} offer={offer} searchParams={sp} />
-            ))}
-          </div>
-        )}
+        {/* Offers list */}
+        <section className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+          {fetchError ? (
+            <ErrorPanel message={fetchError} />
+          ) : offers.length === 0 ? (
+            <EmptyState polygonName={polygonName} countryName={countryName} />
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-5">
+                <p className="text-sm text-ink-600">
+                  <span className="font-bold text-ink-900">{offers.length}</span>
+                  {' '}{offers.length === 1 ? 'offer' : 'offers'} from the partner network · sorted by total price
+                </p>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Total shown = total at checkout
+                </span>
+              </div>
+
+              <ol className="space-y-4">
+                {offers.map((offer, idx) => (
+                  <OfferRow key={offer.offerKey} offer={offer} rank={idx + 1} searchParams={sp} />
+                ))}
+              </ol>
+            </>
+          )}
+        </section>
       </main>
       <SiteFooter />
       <WhatsAppFab />
@@ -122,88 +163,122 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
   );
 }
 
-const Card: React.FC<{ offer: OfferCard; searchParams: SP }> = ({ offer, searchParams }) => {
-  // Keep the customer's full search context on the checkout link
-  // so the next page can render summary + confirmation without
-  // re-querying.
+const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> = ({ offer, rank, searchParams }) => {
   const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(searchParams)) {
-    if (v !== undefined) params.set(k, v);
-  }
+  for (const [k, v] of Object.entries(searchParams)) if (v !== undefined) params.set(k, v);
   params.set('offerKey', offer.offerKey);
   const checkoutHref = `/checkout?${params.toString()}`;
+  const photo = CLASS_PHOTO[offer.vehicleClass.slug] ?? CLASS_PHOTO.standard;
 
   return (
-    <div className="grid items-center gap-4 rounded-3xl border border-ink-100 bg-white p-5 shadow-soft sm:grid-cols-[1fr_auto]">
-      <div className="flex items-start gap-4">
-        <div className={cn(
-          'grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl',
-          'bg-brand-50 text-brand-700',
-        )}>
-          <Car className="h-6 w-6" />
+    <li className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
+      <div className="grid gap-0 md:grid-cols-[280px_1fr_auto]">
+        {/* Photo */}
+        <div className="relative aspect-[4/3] md:aspect-auto md:h-full bg-metal-100">
+          <Image
+            src={`https://images.unsplash.com/${photo}?w=800&q=70&auto=format`}
+            alt={`${offer.vehicleClass.label} class`}
+            fill
+            sizes="(min-width: 768px) 280px, 100vw"
+            className="object-cover"
+            unoptimized
+          />
+          {rank === 1 ? (
+            <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-700 shadow-sm backdrop-blur">
+              <Star className="h-3 w-3 fill-current" />
+              Best price
+            </span>
+          ) : null}
         </div>
-        <div className="min-w-0">
+
+        {/* Body */}
+        <div className="px-6 py-6">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h3 className="text-lg font-bold tracking-tight">{offer.vehicleClass.label}</h3>
+            <h3 className="text-2xl font-extrabold tracking-tighter">{offer.vehicleClass.label}</h3>
             <span className="text-sm text-ink-500">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</span>
           </div>
           {offer.ruleName ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-ink-500">
+            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-ink-500">
               <Tag className="h-3.5 w-3.5" />
               {offer.ruleName}
             </p>
           ) : null}
-          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-600">
+
+          <ul className="mt-5 grid gap-x-6 gap-y-2 text-sm text-ink-700 sm:grid-cols-2 lg:grid-cols-3">
             <li className="inline-flex items-center gap-1.5">
-              <Gauge className="h-3.5 w-3.5" />
+              <Gauge className="h-3.5 w-3.5 text-ink-400" />
               {offer.includedKm} km included
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 text-ink-400" />
               {offer.includedKmPerHour} km / hour
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" />
-              Overage {formatPrice(offer.overageRatePerKm, offer.currency)} / km
+              <Receipt className="h-3.5 w-3.5 text-ink-400" />
+              Overage {formatPrice(offer.overageRatePerKm, offer.currency)}/km
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-ink-400" />
+              {offer.vehicleClass.seats}
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Briefcase className="h-3.5 w-3.5 text-ink-400" />
+              Luggage room
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-ink-400" />
+              Free cancel 24h+
             </li>
           </ul>
         </div>
-      </div>
-      <div className="flex items-center justify-between gap-3 border-t border-ink-100 pt-4 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
-        <div className="text-right">
-          <div className="text-3xl font-extrabold tracking-tightest">
-            {formatPrice(offer.totalPrice, offer.currency)}
+
+        {/* Price + CTA */}
+        <div className="flex flex-col items-stretch justify-between gap-4 border-t border-ink-100 px-6 py-6 md:items-end md:border-l md:border-t-0">
+          <div className="text-right">
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-ink-500">Total</div>
+            <div className="mt-1 text-3xl font-extrabold tracking-tightest text-ink-900">
+              {formatPrice(offer.totalPrice, offer.currency)}
+            </div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-ink-500">Paid in full at checkout</div>
           </div>
-          <div className="text-xs text-ink-500">total · paid in full at checkout</div>
+          <Link
+            href={checkoutHref}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-brand-600 px-5 py-3 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-brand-700">
+            Select
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-        <Link href={checkoutHref} className="btn-primary !px-5 !py-2.5 !text-sm">
-          Select
-          <ArrowRight className="h-4 w-4" />
-        </Link>
       </div>
-    </div>
+    </li>
   );
 };
 
 const ErrorPanel: React.FC<{ message: string }> = ({ message }) => (
-  <div className="mt-8 inline-flex w-full items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+  <div className="inline-flex w-full items-center gap-2 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
     <AlertCircle className="h-4 w-4" />
     {message}
   </div>
 );
 
 const EmptyState: React.FC<{ polygonName: string; countryName: string }> = ({ polygonName, countryName }) => (
-  <div className="mt-8 rounded-3xl border border-dashed border-ink-200 bg-ink-50/50 p-8 text-center">
-    <h2 className="text-lg font-bold tracking-tight">No partners available for this search yet</h2>
-    <p className="mt-2 text-sm leading-relaxed text-ink-600">
+  <div className="rounded-3xl border border-dashed border-ink-200 bg-white p-10 text-center">
+    <span className="inline-flex items-center gap-2 rounded-full bg-ink-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-700">
+      No matches
+    </span>
+    <h2 className="mt-5 text-2xl font-extrabold tracking-tighter">No partners available for this search</h2>
+    <p className="mt-3 mx-auto max-w-lg text-sm leading-relaxed text-ink-600">
       No partner is currently publishing prices for <strong>{polygonName}</strong> in {countryName}
-      that match your pickup time and duration. Try adjusting the time, duration, or pickup area —
-      or contact us via WhatsApp and we'll match you with a partner directly.
+      that match your pickup time and duration. Try a different time or area — or contact us via
+      WhatsApp and we'll match you with a partner directly.
     </p>
-    <div className="mt-5">
-      <Link href="/" className="btn-primary">
+    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+      <Link href="/" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-brand-700">
         New search
+        <ArrowRight className="h-4 w-4" />
       </Link>
+      <a href="https://wa.me/441908380111" target="_blank" rel="noreferrer" className="text-sm font-semibold text-ink-700 hover:text-ink-900">
+        WhatsApp support →
+      </a>
     </div>
   </div>
 );

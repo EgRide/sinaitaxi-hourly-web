@@ -136,8 +136,9 @@ export const HourlySearchForm: React.FC = () => {
 
   return (
     <form
+      id="search"
       onSubmit={onSubmit}
-      className="rounded-3xl border border-ink-100 bg-white p-4 shadow-soft sm:p-5">
+      className="rounded-[22px] bg-white p-4 sm:p-5">
       <GooglePlacesAddress onResolve={onPlaceResolved} />
 
       <ResolutionPanel
