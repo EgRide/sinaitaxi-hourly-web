@@ -108,6 +108,18 @@ export const api = {
 
   booking: (id: string) =>
     request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}`),
+
+  cancelBooking: (id: string, reason?: string) =>
+    request<{
+      ok: true;
+      status: 'cancelled' | 'refunded';
+      refundAmount: number;
+      refundId: string | null;
+      policyApplied: 'full_refund' | 'non_refundable';
+    }>(`/v1/bookings/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: reason ?? undefined }),
+    }),
 };
 
 export interface CheckoutInput {
@@ -163,6 +175,16 @@ export interface BookingDetail {
   createdAt: string;
   confirmedAt: string | null;
   cancelledAt: string | null;
+  refundAmount: number | null;
+  driverName: string | null;
+  driverPhone: string | null;
+  vehicleLabel: string | null;
+  driverAssignedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  kmDriven: number | null;
+  overageKm: number | null;
+  overageAmount: number | null;
   stripeClientSecret: string | null;
 }
 

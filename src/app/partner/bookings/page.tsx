@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Car, MapPin, Calendar, Phone, Mail, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Car, MapPin, Calendar, Phone, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { partnerApi, type PartnerBookingRow } from '@/lib/partner-api';
 import { PartnerShell } from '../PartnerShell';
 import { cn } from '@/lib/cn';
@@ -141,11 +142,9 @@ const BookingRow: React.FC<{ booking: PartnerBookingRow }> = ({ booking }) => {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 border-t border-ink-100 pt-3 text-sm sm:grid-cols-2">
-        <div className="inline-flex items-center gap-1.5 text-ink-700">
-          <span className="font-medium">{booking.customerName ?? '—'}</span>
-        </div>
+      <div className="mt-4 grid gap-2 border-t border-ink-100 pt-3 text-sm sm:grid-cols-[1fr_auto]">
         <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span className="font-semibold text-ink-800">{booking.customerName ?? '—'}</span>
           <a href={`mailto:${booking.customerEmail}`} className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700">
             <Mail className="h-3.5 w-3.5" /> {booking.customerEmail}
           </a>
@@ -154,8 +153,10 @@ const BookingRow: React.FC<{ booking: PartnerBookingRow }> = ({ booking }) => {
               <Phone className="h-3.5 w-3.5" /> {booking.customerPhone}
             </a>
           ) : null}
-          <span className="text-ink-500 font-mono text-[10px]">{booking.id}</span>
         </div>
+        <Link href={`/partner/bookings/${booking.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700">
+          Open <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
       {booking.hoursPerDay && booking.hoursPerDay.length > 1 ? (

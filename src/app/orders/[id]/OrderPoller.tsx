@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { loadStripe, type Stripe as StripeJS } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { CheckCircle2, Clock, Car, AlertCircle, Lock, RefreshCw, Gauge } from 'lucide-react';
+import { CheckCircle2, Clock, Car, AlertCircle, Lock, RefreshCw, Gauge, Phone, X, Loader2, User } from 'lucide-react';
 import { api, type BookingDetail } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
@@ -153,15 +153,26 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
           <CheckCircle2 className="h-6 w-6" />
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Confirmed</div>
-          <div className="text-lg font-bold tracking-tight text-emerald-900">Your driver is booked</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+            {booking.status === 'started' ? 'In progress' : booking.status === 'completed' || booking.status === 'settled' ? 'Trip complete' : 'Confirmed'}
+          </div>
+          <div className="text-lg font-bold tracking-tight text-emerald-900">
+            {booking.status === 'started' ? 'Your trip is underway' : booking.status === 'completed' || booking.status === 'settled' ? 'Thanks for travelling' : 'Your driver is booked'}
+          </div>
         </div>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-emerald-800">
-        We sent a confirmation email to <span className="font-medium">{booking.customerEmail}</span>.
-        You'll get the driver's contact details closer to pickup.
+        {booking.driverName
+          ? <>Driver contact details are below — you'll get an SMS too.</>
+          : <>We sent a confirmation email to <span className="font-medium">{booking.customerEmail}</span>. The driver's contact details will appear here when assigned.</>}
       </p>
     </div>
+
+    {booking.driverName ? <DriverCard booking={booking} /> : null}
+
+    {booking.status === 'confirmed' && new Date(booking.pickupAt) > new Date() ? (
+      <CancelPanel booking={booking} />
+    ) : null}
 
     <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
       <div className="flex items-center gap-3 border-b border-ink-100 pb-4">
@@ -248,6 +259,145 @@ const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value
     <div className="flex items-start justify-between gap-3">
       <dt className="text-[10px] font-bold uppercase tracking-wider text-ink-500">{label}</dt>
       <dd className="text-right text-sm font-medium text-ink-800">{value}</dd>
+    </div>
+  );
+};
+
+const DriverCard: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
+  <div className="rounded-3xl border border-brand-200 bg-brand-50 p-5">
+    <div className="flex items-center gap-3 border-b border-brand-100 pb-3">
+      <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-brand-700">
+        <User className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Your driver</div>
+        <div className="text-lg font-bold text-brand-900">{booking.driverName}</div>
+      </div>
+    </div>
+    <dl className="mt-3 space-y-2 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Phone</dt>
+        <dd className="text-right">
+          {booking.driverPhone ? (
+            <a href={`tel:${booking.driverPhone}`} className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-900">
+              <Phone className="h-3.5 w-3.5" />
+              {booking.driverPhone}
+            </a>
+          ) : '—'}
+        </dd>
+      </div>
+      <div className="flex items-start justify-between gap-3">
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Vehicle</dt>
+        <dd className="text-right text-sm font-medium text-brand-900">{booking.vehicleLabel ?? '—'}</dd>
+      </div>
+      {booking.kmDriven !== null ? (
+        <div className="flex items-start justify-between gap-3 border-t border-brand-100 pt-2">
+          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Km driven</dt>
+          <dd className="text-right text-sm font-medium text-brand-900">{booking.kmDriven} km</dd>
+        </div>
+      ) : null}
+      {(booking.overageAmount ?? 0) > 0 ? (
+        <div className="flex items-start justify-between gap-3">
+          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Overage charged</dt>
+          <dd className="text-right text-sm font-bold text-brand-900">
+            {new Intl.NumberFormat('en', { style: 'currency', currency: booking.currency }).format(booking.overageAmount!)}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  </div>
+);
+
+const CancelPanel: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
+  const [open, setOpen] = useState(false);
+  const hoursUntilPickup = (new Date(booking.pickupAt).getTime() - Date.now()) / (60 * 60 * 1000);
+  const eligibleForRefund = hoursUntilPickup > 24;
+
+  return (
+    <>
+      <div className="rounded-3xl border border-ink-100 bg-white p-5 shadow-soft">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Need to cancel?</h3>
+        <p className="mt-2 text-sm text-ink-700">
+          {eligibleForRefund
+            ? <><strong>Free cancellation</strong> — you're more than 24 hours from pickup, so you'll get a full refund.</>
+            : <><strong>Non-refundable</strong> — pickup is in less than 24 hours. Cancelling now means you won't get your money back.</>}
+        </p>
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-2xl border border-ink-200 bg-white px-4 py-2 text-sm font-semibold text-ink-700 transition hover:border-red-200 hover:text-red-700">
+          Cancel booking
+        </button>
+      </div>
+      {open ? <CancelModal booking={booking} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+};
+
+const CancelModal: React.FC<{ booking: BookingDetail; onClose: () => void }> = ({ booking, onClose }) => {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hoursUntilPickup = (new Date(booking.pickupAt).getTime() - Date.now()) / (60 * 60 * 1000);
+  const refundAmount = hoursUntilPickup > 24 ? booking.retailPrice : 0;
+  const refundLabel = refundAmount > 0
+    ? new Intl.NumberFormat('en', { style: 'currency', currency: booking.currency }).format(refundAmount)
+    : 'No refund';
+
+  const onConfirm = async () => {
+    setBusy(true); setError(null);
+    try {
+      await api.cancelBooking(booking.id, reason || undefined);
+      // Reload the page so the poller picks up the new state.
+      if (typeof window !== 'undefined') window.location.reload();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4 py-8">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-glow">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-xl font-bold tracking-tight">Cancel booking?</h2>
+          <button onClick={onClose} aria-label="Close" className="rounded-xl p-1 text-ink-500 hover:bg-ink-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="mt-3 text-sm text-ink-600">
+          {refundAmount > 0
+            ? <>You'll be refunded <strong>{refundLabel}</strong> to the original payment method within 2–10 business days.</>
+            : <>Pickup is in <strong>less than 24 hours</strong>. This cancellation is <strong>non-refundable</strong> per our policy.</>}
+        </p>
+
+        <label className="mt-4 block text-sm">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Reason (optional)</span>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            rows={3}
+            placeholder="Tell us what changed — helps us learn"
+            className="mt-1 w-full rounded-2xl border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+          />
+        </label>
+
+        {error ? (
+          <div className="mt-3 inline-flex w-full items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          <button onClick={onClose} className="text-sm font-semibold text-ink-600 hover:text-ink-900">Keep booking</button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+            {busy ? (<><Loader2 className="h-4 w-4 animate-spin" /> Cancelling…</>) : refundAmount > 0 ? `Cancel & refund ${refundLabel}` : 'Cancel without refund'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

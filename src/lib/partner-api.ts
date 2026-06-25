@@ -129,6 +129,67 @@ export const partnerApi = {
     request<{ ok: true }>(`/v1/partner/rules/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   bookings: () => request<{ bookings: PartnerBookingRow[] }>('/v1/partner/bookings'),
+
+  bookingDetail: (id: string) =>
+    request<{ booking: PartnerBookingDetail }>(`/v1/partner/bookings/${encodeURIComponent(id)}`),
+
+  assignDriver: (id: string, input: { driverName: string; driverPhone: string; vehicleLabel: string }) =>
+    request<{ ok: true }>(`/v1/partner/bookings/${encodeURIComponent(id)}/assign`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  startTrip: (id: string, input: { odometerStart: number }) =>
+    request<{ ok: true }>(`/v1/partner/bookings/${encodeURIComponent(id)}/start`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  completeTrip: (id: string, input: { odometerEnd: number }) =>
+    request<{ ok: true; kmDriven: number; overageKm: number; overageAmount: number; overageBilled: boolean }>(
+      `/v1/partner/bookings/${encodeURIComponent(id)}/complete`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+
+  declareNoShow: (id: string) =>
+    request<{ ok: true }>(`/v1/partner/bookings/${encodeURIComponent(id)}/no-show`, {
+      method: 'POST',
+    }),
 };
+
+export interface PartnerBookingDetail {
+  id: string;
+  status: string;
+  customerEmail: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  countryCode: string;
+  polygonId: string;
+  polygonName: string;
+  vehicleClass: string;
+  pickupAt: string;
+  pickupAddress: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  durationHours: number;
+  hoursPerDay: number[] | null;
+  includedKm: number;
+  retailPrice: number;
+  wholesalePrice: number;
+  currency: string;
+  ruleName: string | null;
+  driverName: string | null;
+  driverPhone: string | null;
+  vehicleLabel: string | null;
+  driverAssignedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  odometerStart: number | null;
+  odometerEnd: number | null;
+  overageKm: number | null;
+  overageAmount: number | null;
+  overageChargeId: string | null;
+  createdAt: string;
+}
 
 export { PartnerApiError };
