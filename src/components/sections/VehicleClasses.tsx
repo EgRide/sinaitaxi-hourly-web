@@ -60,19 +60,18 @@ export const VehicleClasses: React.FC = async () => {
 
 const ClassCard: React.FC<{ cls: VehicleClass }> = ({ cls }) => (
   <article className="group overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
-    <div className="relative aspect-[16/10] w-full overflow-hidden bg-metal-100">
+    <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-ink-50 to-white">
       {cls.photoUrl ? (
         <Image
           src={cls.photoUrl}
           alt={`${cls.name} — illustrative photograph`}
           fill
           sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-cover transition duration-700 group-hover:scale-[1.04]"
+          className="object-contain p-8 transition duration-700 group-hover:scale-[1.04]"
           unoptimized
         />
       ) : null}
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/30 to-transparent" />
-      <span className="absolute left-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-ink-800 backdrop-blur">
+      <span className="absolute left-5 top-5 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-ink-800 shadow-sm backdrop-blur">
         {cls.vehicleTypeName}
       </span>
     </div>

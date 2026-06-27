@@ -207,14 +207,16 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
   return (
     <li className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
       <div className="grid gap-0 md:grid-cols-[280px_1fr_auto]">
-        {/* Photo */}
-        <div className="relative aspect-[4/3] md:aspect-auto md:h-full bg-metal-100">
+        {/* Photo — PHP serves car illustrations on transparent
+            backgrounds, so use object-contain with padding to
+            avoid cropping the wheels/body. */}
+        <div className="relative aspect-[4/3] md:aspect-auto md:h-full bg-gradient-to-br from-ink-50 to-white">
           <Image
             src={photo}
             alt={`${offer.vehicleClass.label} class`}
             fill
             sizes="(min-width: 768px) 280px, 100vw"
-            className="object-cover"
+            className="object-contain p-5"
             unoptimized
           />
           {rank === 1 ? (

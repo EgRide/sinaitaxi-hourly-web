@@ -236,14 +236,14 @@ const ClassStrip: React.FC<{ quickHref: string; polygonName: string }> = async (
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {classes.slice(0, 4).map(c => (
             <Link key={c.id} href={quickHref} className="group overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
-              <div className="relative aspect-[5/4] w-full overflow-hidden bg-metal-100">
+              <div className="relative aspect-[5/4] w-full overflow-hidden bg-gradient-to-br from-ink-50 to-white">
                 {c.photoUrl ? (
                   <Image
                     src={c.photoUrl}
                     alt={`${c.name} — illustrative photograph`}
                     fill
                     sizes="(min-width: 1024px) 25vw, 50vw"
-                    className="object-cover transition duration-500 group-hover:scale-105"
+                    className="object-contain p-6 transition duration-500 group-hover:scale-105"
                     unoptimized
                   />
                 ) : null}
