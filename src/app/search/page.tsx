@@ -51,14 +51,10 @@ export const metadata: Metadata = {
   title: 'Search results',
 };
 
-// Editorial photography per vehicle class — same set as the homepage
-// so the marketplace reads as one product.
-const CLASS_PHOTO: Record<string, string> = {
-  standard: 'photo-1494976388531-d1058494cdd8',
-  premium:  'photo-1503376780353-7e6692767b70',
-  suv:      'photo-1605559424843-9e4c228bf1c2',
-  van:      'photo-1571127236794-81c0bbfe1ce3',
-};
+// Generic road shot used when an offer's class doesn't carry its
+// own photoUrl (rare — only happens if PHP exposes a new ride-type
+// before our curated photo mapping is updated).
+const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=70&auto=format';
 
 const formatPrice = (n: number, currency: string): string => {
   try {
@@ -206,7 +202,7 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
   for (const [k, v] of Object.entries(searchParams)) if (v !== undefined) params.set(k, v);
   params.set('offerKey', offer.offerKey);
   const checkoutHref = `/checkout?${params.toString()}`;
-  const photo = CLASS_PHOTO[offer.vehicleClass.slug] ?? CLASS_PHOTO.standard;
+  const photo = offer.vehicleClass.photoUrl ?? FALLBACK_PHOTO;
 
   return (
     <li className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
@@ -214,7 +210,7 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
         {/* Photo */}
         <div className="relative aspect-[4/3] md:aspect-auto md:h-full bg-metal-100">
           <Image
-            src={`https://images.unsplash.com/${photo}?w=800&q=70&auto=format`}
+            src={photo}
             alt={`${offer.vehicleClass.label} class`}
             fill
             sizes="(min-width: 768px) 280px, 100vw"

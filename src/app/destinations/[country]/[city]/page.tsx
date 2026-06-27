@@ -9,12 +9,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, MapPin, Car, ArrowRight, Sparkles, Users, Briefcase } from 'lucide-react';
+import { Clock, MapPin, Car, ArrowRight, Sparkles, Users, Briefcase, Baby } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { Faq } from '@/components/sections/Faq';
-import { api } from '@/lib/api';
+import { api, type VehicleClass } from '@/lib/api';
 
 type Params = Promise<{ country: string; city: string }>;
 
@@ -138,8 +138,8 @@ export default async function DestinationPage({ params }: { params: Params }) {
             />
             <Feature
               icon={<Car className="h-5 w-5" />}
-              title="Four vehicle classes"
-              body="Standard, Premium, SUV, or Van. Pick the class — the partner picks a specific car from their fleet."
+              title="40+ vehicle classes"
+              body="From economy sedan to executive saloon to 50-pax bus. Pick the class — the partner picks a specific car from their fleet."
             />
             <Feature
               icon={<MapPin className="h-5 w-5" />}
@@ -149,46 +149,10 @@ export default async function DestinationPage({ params }: { params: Params }) {
           </div>
         </section>
 
-        {/* Class strip */}
-        <section className="bg-ink-50/60 py-20 lg:py-28">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="max-w-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Classes available</span>
-              <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
-                Pick a class. <span className="text-ink-400">Live prices.</span>
-              </h2>
-            </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: 'Standard', seats: 'Up to 4', desc: 'Sedan / hatchback', unsplash: 'photo-1494976388531-d1058494cdd8' },
-                { label: 'Premium',  seats: 'Up to 4', desc: 'Executive sedan',   unsplash: 'photo-1503376780353-7e6692767b70' },
-                { label: 'SUV',      seats: '4-5',     desc: 'Raised ride',       unsplash: 'photo-1605559424843-9e4c228bf1c2' },
-                { label: 'Van',      seats: '6-7',     desc: 'Group or kit',      unsplash: 'photo-1571127236794-81c0bbfe1ce3' },
-              ].map(v => (
-                <Link key={v.label} href={quickHref} className="group overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
-                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-metal-100">
-                    <Image
-                      src={`https://images.unsplash.com/${v.unsplash}?w=800&q=70&auto=format`}
-                      alt={`${v.label} class`}
-                      fill
-                      sizes="(min-width: 1024px) 25vw, 50vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                      unoptimized
-                    />
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-xl font-extrabold tracking-tighter">{v.label}</h3>
-                    <p className="mt-1 text-xs text-ink-500">{v.desc}</p>
-                    <div className="mt-3 flex items-center gap-3 text-xs text-ink-600">
-                      <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {v.seats}</span>
-                      <span className="inline-flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Luggage room</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Class strip — pulls the featured slice of the live
+            /v1/catalog/vehicle-classes catalogue so it stays in
+            sync with the homepage and the partner rule editor. */}
+        <ClassStrip quickHref={quickHref} polygonName={polygon.name} />
 
         {/* Sibling polygons */}
         <section className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
@@ -238,6 +202,75 @@ const Feature: React.FC<{ icon: React.ReactNode; title: string; body: string }> 
     <p className="mt-2 text-sm leading-relaxed text-ink-600">{body}</p>
   </div>
 );
+
+// Renders the live featured slice of /v1/catalog/vehicle-classes
+// (synced from PHP /ride-types). Each card deep-links into the
+// search results pre-filled for the destination.
+const ClassStrip: React.FC<{ quickHref: string; polygonName: string }> = async ({ quickHref, polygonName }) => {
+  let classes: VehicleClass[] = [];
+  try {
+    const r = await api.vehicleClasses({ featuredOnly: true });
+    classes = r.classes;
+  } catch {
+    /* PHP outage — render nothing rather than break the page */
+  }
+  if (!classes.length) return null;
+
+  return (
+    <section className="bg-ink-50/60 py-20 lg:py-28">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-2xl">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Classes available</span>
+            <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
+              Pick a class. <span className="text-ink-400">Live prices.</span>
+            </h2>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-600">
+              Top picks from our 40+ classes — every active partner in {polygonName} surfaces side-by-side at checkout.
+            </p>
+          </div>
+          <Link href="/destinations" className="hidden text-sm font-bold uppercase tracking-[0.12em] text-brand-600 hover:text-brand-700 md:inline-flex">
+            All classes →
+          </Link>
+        </div>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {classes.slice(0, 4).map(c => (
+            <Link key={c.id} href={quickHref} className="group overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
+              <div className="relative aspect-[5/4] w-full overflow-hidden bg-metal-100">
+                {c.photoUrl ? (
+                  <Image
+                    src={c.photoUrl}
+                    alt={`${c.name} — illustrative photograph`}
+                    fill
+                    sizes="(min-width: 1024px) 25vw, 50vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    unoptimized
+                  />
+                ) : null}
+                <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.15em] text-ink-800 backdrop-blur">
+                  {c.vehicleTypeName}
+                </span>
+              </div>
+              <div className="p-5">
+                <h3 className="text-xl font-extrabold tracking-tighter">{c.name}</h3>
+                {c.description ? (
+                  <p className="mt-1 text-xs text-ink-500 line-clamp-1">{c.description}</p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-600">
+                  <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {c.seats > 0 ? `Up to ${c.seats}` : '—'}</span>
+                  <span className="inline-flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> {c.baggage > 0 ? `${c.baggage} bags` : 'Luggage'}</span>
+                  {c.childSeatLimit > 0 ? (
+                    <span className="inline-flex items-center gap-1"><Baby className="h-3.5 w-3.5" /> {c.childSeatLimit} max</span>
+                  ) : null}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const SiblingPolygons: React.FC<{ countryCode: string; excludePolygonId: string }> = async ({ countryCode, excludePolygonId }) => {
   let polygons: { id: string; name: string; slug: string | null }[] = [];

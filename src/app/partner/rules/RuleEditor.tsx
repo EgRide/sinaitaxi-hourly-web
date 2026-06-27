@@ -304,8 +304,11 @@ export const RuleEditor: React.FC<Props> = ({ initial, mode }) => {
                         className="h-4 w-4 rounded border-ink-300 text-brand-500"
                       />
                       <div>
-                        <div className="font-bold text-ink-900">{c.label}</div>
-                        <div className="text-xs text-ink-500">{c.description} · {c.seats}</div>
+                        <div className="font-bold text-ink-900">{c.name}</div>
+                        <div className="text-xs text-ink-500">
+                          {c.description ? `${c.description} · ` : ''}
+                          {c.seats > 0 ? `Up to ${c.seats} seats` : c.vehicleTypeName}
+                        </div>
                       </div>
                     </label>
                     {ps.enabled ? (

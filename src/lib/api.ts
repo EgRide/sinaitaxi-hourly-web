@@ -35,10 +35,30 @@ const request = async <T>(path: string, init: RequestOpts = {}): Promise<T> => {
 export interface Country { code: string; name: string; }
 export interface Polygon { id: string; name: string; slug: string | null; }
 export interface VehicleClass {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  vehicleTypeName: string;
+  seats: number;        // numeric capacity from PHP
+  baggage: number;
+  childSeatLimit: number;
+  photoUrl: string | null;
+  isFeatured: boolean;
+}
+
+// Compact representation that travels with an offer card or a
+// confirmed booking — includes both the display string (`seats`)
+// AND the numeric (`seatsCount`) so UIs can sort/filter.
+export interface OfferVehicleClass {
   slug: string;
   label: string;
   description: string;
-  seats: string;
+  seats: string;            // "Up to N seats"
+  seatsCount: number;
+  baggage: number;
+  photoUrl: string | null;
+  vehicleTypeName: string;
 }
 
 export interface ResolveAddressInput {
@@ -80,10 +100,12 @@ export const api = {
       `/v1/catalog/countries/${encodeURIComponent(code)}/polygons`,
       { next: { revalidate: 3600 } },
     ),
-  vehicleClasses: () =>
-    request<{ classes: VehicleClass[] }>('/v1/catalog/vehicle-classes', {
-      next: { revalidate: 86400 },
-    }),
+  vehicleClasses: (input: { featuredOnly?: boolean } = {}) => {
+    const qs = input.featuredOnly ? '?featuredOnly=1' : '';
+    return request<{ classes: VehicleClass[] }>(`/v1/catalog/vehicle-classes${qs}`, {
+      next: { revalidate: 3600 },
+    });
+  },
 
   resolveAddress: (input: ResolveAddressInput) =>
     request<ResolveAddressResult>('/v1/resolve-address', {
@@ -167,7 +189,7 @@ export interface BookingDetail {
   countryCode: string;
   polygonId: string;
   polygonName: string;
-  vehicleClass: { slug: string; label: string; description: string; seats: string };
+  vehicleClass: OfferVehicleClass;
   ruleName: string | null;
   pickupAt: string;
   pickupAddress: string;
@@ -198,7 +220,7 @@ export interface OfferCard {
   ruleId: string;
   ruleName: string | null;
   partnerPhpId: string;
-  vehicleClass: { slug: string; label: string; description: string; seats: string };
+  vehicleClass: OfferVehicleClass;
   hourlyRate: number;
   totalPrice: number;
   currency: string;
