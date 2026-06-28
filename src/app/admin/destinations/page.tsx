@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Plus, AlertCircle, MapPin, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, MapPin, ExternalLink, Sparkles } from 'lucide-react';
 import { adminApi, type AdminDestinationContent } from '@/lib/admin-api';
 import { AdminShell } from '../AdminShell';
 
@@ -23,12 +23,33 @@ const DestinationsList: React.FC = () => {
   const [rows, setRows] = useState<AdminDestinationContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    adminApi.destinations()
+  const reload = () => {
+    setLoading(true);
+    return adminApi.destinations()
       .then(r => { setRows(r.destinations); setLoading(false); })
       .catch(err => { setError((err as Error).message); setLoading(false); });
-  }, []);
+  };
+
+  useEffect(() => { void reload(); }, []);
+
+  const onSeed = async () => {
+    if (!confirm('Apply the bundled launch seed? This upserts every entry in src/destinationData.ts (currently Sharm el-Sheikh) as a published row.')) return;
+    setSeeding(true);
+    setError(null);
+    setSeedMsg(null);
+    try {
+      const r = await adminApi.seedDestinations();
+      setSeedMsg(`Seeded ${r.upserted} destination${r.upserted === 1 ? '' : 's'}: ${r.slugs.join(', ')}`);
+      await reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -39,18 +60,34 @@ const DestinationsList: React.FC = () => {
             Rich landing-page content per city. Drafts stay invisible until you publish.
           </p>
         </div>
-        <Link
-          href="/admin/destinations/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">
-          <Plus className="h-4 w-4" />
-          New destination
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSeed}
+            disabled={seeding}
+            className="inline-flex items-center gap-2 rounded-xl bg-ink-100 px-4 py-2 text-sm font-bold text-ink-800 hover:bg-ink-200 disabled:opacity-50">
+            {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Apply launch seed
+          </button>
+          <Link
+            href="/admin/destinations/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700">
+            <Plus className="h-4 w-4" />
+            New destination
+          </Link>
+        </div>
       </header>
 
       {error ? (
         <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 mt-0.5" />
           {error}
+        </div>
+      ) : null}
+      {seedMsg ? (
+        <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <Sparkles className="h-4 w-4 mt-0.5" />
+          {seedMsg}
         </div>
       ) : null}
 

@@ -228,6 +228,11 @@ export const adminApi = {
       method: 'DELETE',
     }),
 
+  seedDestinations: () =>
+    request<{ ok: true; upserted: number; slugs: string[] }>('/v1/admin/destinations/seed', {
+      method: 'POST',
+    }),
+
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 };
