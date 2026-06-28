@@ -233,6 +233,15 @@ export const adminApi = {
       method: 'POST',
     }),
 
+  destinationsCoverage: () =>
+    request<{ polygons: number; withContent: number; gap: number }>('/v1/admin/destinations/coverage'),
+
+  generateDestinations: (batchSize?: number) =>
+    request<{ attempted: number; generated: number; skipped: number; failed: number; durationMs: number }>(
+      `/v1/admin/destinations/generate${batchSize ? `?batchSize=${batchSize}` : ''}`,
+      { method: 'POST' },
+    ),
+
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 };

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Plus, AlertCircle, MapPin, ExternalLink, Sparkles } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, MapPin, ExternalLink, Sparkles, Wand2 } from 'lucide-react';
 import { adminApi, type AdminDestinationContent } from '@/lib/admin-api';
 import { AdminShell } from '../AdminShell';
 
@@ -25,15 +25,37 @@ const DestinationsList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genMsg, setGenMsg] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<{ polygons: number; withContent: number; gap: number } | null>(null);
 
   const reload = () => {
     setLoading(true);
-    return adminApi.destinations()
-      .then(r => { setRows(r.destinations); setLoading(false); })
+    return Promise.all([
+      adminApi.destinations().then(r => setRows(r.destinations)),
+      adminApi.destinationsCoverage().then(setCoverage).catch(() => setCoverage(null)),
+    ])
+      .then(() => setLoading(false))
       .catch(err => { setError((err as Error).message); setLoading(false); });
   };
 
   useEffect(() => { void reload(); }, []);
+
+  const onGenerate = async () => {
+    if (!confirm('Generate AI content for up to the next batch of polygons that don’t have content yet? Output is published immediately.')) return;
+    setGenerating(true);
+    setError(null);
+    setGenMsg(null);
+    try {
+      const r = await adminApi.generateDestinations();
+      setGenMsg(`Generated ${r.generated} · failed ${r.failed} · skipped ${r.skipped} · ${(r.durationMs / 1000).toFixed(0)}s`);
+      await reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const onSeed = async () => {
     if (!confirm('Apply the bundled launch seed? This upserts every entry in src/destinationData.ts (currently Sharm el-Sheikh) as a published row.')) return;
@@ -63,6 +85,14 @@ const DestinationsList: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={onGenerate}
+            disabled={generating}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50">
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+            Generate AI batch
+          </button>
+          <button
+            type="button"
             onClick={onSeed}
             disabled={seeding}
             className="inline-flex items-center gap-2 rounded-xl bg-ink-100 px-4 py-2 text-sm font-bold text-ink-800 hover:bg-ink-200 disabled:opacity-50">
@@ -88,6 +118,34 @@ const DestinationsList: React.FC = () => {
         <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           <Sparkles className="h-4 w-4 mt-0.5" />
           {seedMsg}
+        </div>
+      ) : null}
+      {genMsg ? (
+        <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
+          <Wand2 className="h-4 w-4 mt-0.5" />
+          {genMsg}
+        </div>
+      ) : null}
+
+      {coverage ? (
+        <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-soft">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-ink-700">Coverage</h2>
+            <span className="font-mono text-sm text-ink-500">
+              {coverage.withContent} / {coverage.polygons}
+            </span>
+          </div>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-ink-100">
+            <div
+              className="h-full bg-gradient-to-r from-brand-500 to-violet-500 transition-all"
+              style={{ width: `${coverage.polygons === 0 ? 0 : Math.min(100, (coverage.withContent / coverage.polygons) * 100)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-ink-500">
+            {coverage.gap === 0
+              ? 'Every active polygon has destination content.'
+              : `${coverage.gap} polygon${coverage.gap === 1 ? '' : 's'} still on the template fallback. Hit "Generate AI batch" to fill some.`}
+          </p>
         </div>
       ) : null}
 
