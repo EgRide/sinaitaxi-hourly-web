@@ -14,13 +14,19 @@ class ApiError extends Error {
 type RequestOpts = RequestInit & { next?: { revalidate?: number } };
 
 const request = async <T>(path: string, init: RequestOpts = {}): Promise<T> => {
+  // Only declare a JSON content-type when we're actually sending
+  // a body — Fastify rejects empty-body POSTs that ship the
+  // header with "Body cannot be empty".
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...((init.headers as Record<string, string>) ?? {}),
+  };
+  if (init.body !== undefined && init.body !== null) {
+    headers['Content-Type'] = 'application/json';
+  }
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...(init.headers ?? {}),
-    },
+    headers,
     cache: init.next ? undefined : 'no-store',
   });
   if (!res.ok) {

@@ -28,11 +28,16 @@ class AdminApiError extends Error {
 }
 
 const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+  // Fastify rejects POST/PATCH calls that declare Content-Type:
+  // application/json but ship no body with "Body cannot be empty".
+  // Only set the JSON content-type when we're actually sending one.
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
     ...((init.headers as Record<string, string>) ?? {}),
   };
+  if (init.body !== undefined && init.body !== null) {
+    headers['Content-Type'] = 'application/json';
+  }
   const token = adminSession.token;
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, { ...init, headers, cache: 'no-store' });
