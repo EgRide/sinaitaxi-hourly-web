@@ -9,12 +9,12 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, MapPin, Car, ArrowRight, Sparkles, Users, Briefcase, Baby } from 'lucide-react';
+import { Clock, MapPin, Car, ArrowRight, Sparkles, Users, Briefcase, Baby, Lightbulb, HelpCircle } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { Faq } from '@/components/sections/Faq';
-import { api, type VehicleClass } from '@/lib/api';
+import { api, type VehicleClass, type DestinationContent } from '@/lib/api';
 
 type Params = Promise<{ country: string; city: string }>;
 
@@ -44,21 +44,38 @@ async function resolveCityFromSlug(country: string, city: string) {
   }
 }
 
+async function loadContent(country: string, city: string): Promise<DestinationContent | null> {
+  try {
+    const r = await api.destinationContent(country.toUpperCase(), city.toLowerCase());
+    return r.content;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { country, city } = await params;
-  const resolved = await resolveCityFromSlug(country, city);
+  const [resolved, content] = await Promise.all([
+    resolveCityFromSlug(country, city),
+    loadContent(country, city),
+  ]);
   if (!resolved) return { title: 'Destination not found' };
   const { country: c, polygon } = resolved;
+  const fallbackTitle = `Hourly chauffeur in ${polygon.name}, ${c.name}`;
+  const fallbackDescription = `Hire a chauffeured car by the hour in ${polygon.name}. From half a day to multi-day rentals on the Sinai Taxi marketplace.`;
   return {
-    title: `Hourly chauffeur in ${polygon.name}, ${c.name}`,
-    description: `Hire a chauffeured car by the hour in ${polygon.name}. From half a day to multi-day rentals on the Sinai Taxi marketplace.`,
+    title: content?.title ?? fallbackTitle,
+    description: content?.metaDescription ?? fallbackDescription,
     alternates: { canonical: `https://hourly.sinaitaxi.com/destinations/${country.toLowerCase()}/${city.toLowerCase()}` },
   };
 }
 
 export default async function DestinationPage({ params }: { params: Params }) {
   const { country, city } = await params;
-  const resolved = await resolveCityFromSlug(country, city);
+  const [resolved, content] = await Promise.all([
+    resolveCityFromSlug(country, city),
+    loadContent(country, city),
+  ]);
   if (!resolved) notFound();
   const { country: c, polygon } = resolved;
 
@@ -69,6 +86,8 @@ export default async function DestinationPage({ params }: { params: Params }) {
   const pickupAt = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T${pad(tomorrow.getHours())}:00`;
   const quickHref = `/search?countryCode=${c.code}&polygonId=${polygon.id}&pickupAt=${encodeURIComponent(pickupAt)}&durationHours=4`;
   const heroUnsplash = COUNTRY_HERO[country.toLowerCase()] ?? DEFAULT_HERO;
+  const heroSrc = content?.heroPhotoUrl
+    ?? `https://images.unsplash.com/${heroUnsplash}?auto=format&fit=crop&w=2400&q=80`;
 
   return (
     <>
@@ -78,7 +97,7 @@ export default async function DestinationPage({ params }: { params: Params }) {
         <section className="relative isolate overflow-hidden bg-brand-900 text-white">
           <div className="absolute inset-0 -z-10">
             <Image
-              src={`https://images.unsplash.com/${heroUnsplash}?auto=format&fit=crop&w=2400&q=80`}
+              src={heroSrc}
               alt=""
               fill
               sizes="100vw"
@@ -149,10 +168,34 @@ export default async function DestinationPage({ params }: { params: Params }) {
           </div>
         </section>
 
+        {/* Tier-2 editorial sections (skipped when no
+            DestinationContent is published for this polygon). */}
+        {content?.intro ? (
+          <section className="mx-auto max-w-6xl px-6 pb-8 pt-4 lg:pb-12">
+            <div className="max-w-3xl space-y-4 text-lg leading-relaxed text-ink-700">
+              {content.intro.split(/\n{2,}/).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {content?.attractions?.length ? (
+          <AttractionsSection items={content.attractions} polygonName={polygon.name} quickHref={quickHref} />
+        ) : null}
+
         {/* Class strip — pulls the featured slice of the live
             /v1/catalog/vehicle-classes catalogue so it stays in
             sync with the homepage and the partner rule editor. */}
         <ClassStrip quickHref={quickHref} polygonName={polygon.name} />
+
+        {content?.tips?.length ? (
+          <TipsSection items={content.tips} polygonName={polygon.name} />
+        ) : null}
+
+        {content?.faqs?.length ? (
+          <LocalFaqSection items={content.faqs} polygonName={polygon.name} />
+        ) : null}
 
         {/* Sibling polygons */}
         <section className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
@@ -201,6 +244,123 @@ const Feature: React.FC<{ icon: React.ReactNode; title: string; body: string }> 
     <h3 className="mt-4 text-xl font-extrabold tracking-tighter">{title}</h3>
     <p className="mt-2 text-sm leading-relaxed text-ink-600">{body}</p>
   </div>
+);
+
+// ── Tier-2 editorial blocks ──────────────────────────────────
+// Each section degrades silently when its data is empty — the
+// page.tsx already gates rendering, but the components also
+// guard so we never ship an empty-shell <section>.
+
+const AttractionsSection: React.FC<{
+  items: NonNullable<DestinationContent['attractions']>;
+  polygonName: string;
+  quickHref: string;
+}> = ({ items, polygonName, quickHref }) => (
+  <section className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+    <div className="max-w-2xl">
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">What to do</span>
+      <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
+        Trips that make the rental pay off.
+      </h2>
+      <p className="mt-4 text-base leading-relaxed text-ink-600">
+        Local picks that work cleanly within a half-day, full-day, or multi-day rental in {polygonName}.
+      </p>
+    </div>
+    <ul className="mt-12 grid gap-5 md:grid-cols-2">
+      {items.map((a) => (
+        <li key={a.name} className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft">
+          {a.photoUrl ? (
+            <div className="relative aspect-[16/10] w-full overflow-hidden bg-ink-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.photoUrl} alt={a.name} loading="lazy" className="h-full w-full object-cover" />
+            </div>
+          ) : null}
+          <div className="p-6">
+            <h3 className="text-2xl font-extrabold tracking-tighter">{a.name}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-ink-600">{a.blurb}</p>
+            {a.durationMin ? (
+              <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
+                <Clock className="h-3.5 w-3.5" />
+                {a.durationMin >= 720
+                  ? `${Math.round(a.durationMin / 60)} hr rental ↑`
+                  : `${Math.round(a.durationMin / 60)} hr rental`}
+              </p>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+    <div className="mt-10 text-center">
+      <Link href={quickHref} className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700">
+        Plan one of these
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
+  </section>
+);
+
+const TipsSection: React.FC<{
+  items: NonNullable<DestinationContent['tips']>;
+  polygonName: string;
+}> = ({ items, polygonName }) => (
+  <section className="bg-ink-50/60 py-20 lg:py-28">
+    <div className="mx-auto max-w-6xl px-6">
+      <div className="max-w-2xl">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Local tips</span>
+        <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
+          What we'd tell a friend.
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-ink-600">
+          Practical things to know that save time, money, or a headache when you're in {polygonName}.
+        </p>
+      </div>
+      <ul className="mt-12 grid gap-4 md:grid-cols-2">
+        {items.map((t) => (
+          <li key={t.title} className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-50 text-amber-700">
+              <Lightbulb className="h-5 w-5" />
+            </div>
+            <h3 className="mt-4 text-lg font-extrabold tracking-tighter">{t.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-ink-600">{t.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+);
+
+const LocalFaqSection: React.FC<{
+  items: NonNullable<DestinationContent['faqs']>;
+  polygonName: string;
+}> = ({ items, polygonName }) => (
+  <section className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
+    <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
+      <div>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Local FAQ</span>
+        <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
+          Questions about {polygonName}.
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-ink-600">
+          The specific things travellers ask about renting an hourly chauffeur here.
+        </p>
+      </div>
+      <ul className="space-y-3">
+        {items.map((q) => (
+          <li key={q.question} className="rounded-2xl border border-ink-100 bg-white p-6 shadow-soft">
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                <HelpCircle className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-ink-900">{q.question}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-600">{q.answer}</p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
 );
 
 // Renders the live featured slice of /v1/catalog/vehicle-classes

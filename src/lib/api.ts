@@ -131,6 +131,12 @@ export const api = {
   booking: (id: string) =>
     request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}`),
 
+  destinationContent: (country: string, city: string) =>
+    request<{ content: DestinationContent | null }>(
+      `/v1/destinations/${encodeURIComponent(country)}/${encodeURIComponent(city)}`,
+      { next: { revalidate: 600 } },                         // 10-min ISR
+    ),
+
   applyPromoCode: (input: { code: string; subtotal: number; currency: string }) =>
     request<
       | { ok: true; code: string; discount: number; reason: 'percent' | 'amount' }
@@ -264,6 +270,25 @@ export interface OffersResult {
     overageRatePerKm?: number;
   };
   offers: OfferCard[];
+}
+
+export interface Attraction {
+  name: string;
+  blurb: string;
+  durationMin?: number | null;
+  photoUrl?: string | null;
+}
+export interface DestinationTip { title: string; body: string; }
+export interface DestinationFaq { question: string; answer: string; }
+
+export interface DestinationContent {
+  title: string | null;
+  metaDescription: string | null;
+  heroPhotoUrl: string | null;
+  intro: string | null;
+  attractions: Attraction[];
+  tips: DestinationTip[];
+  faqs: DestinationFaq[];
 }
 
 export { ApiError };

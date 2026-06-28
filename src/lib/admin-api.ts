@@ -208,6 +208,26 @@ export const adminApi = {
       method: 'DELETE',
     }),
 
+  destinations: () =>
+    request<{ destinations: AdminDestinationContent[] }>('/v1/admin/destinations'),
+
+  createDestination: (input: AdminDestinationContentInput) =>
+    request<{ ok: true; id: string }>('/v1/admin/destinations', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateDestination: (id: string, patch: Partial<AdminDestinationContentInput>) =>
+    request<{ ok: true }>(`/v1/admin/destinations/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  deleteDestination: (id: string) =>
+    request<{ ok: true }>(`/v1/admin/destinations/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 };
@@ -227,6 +247,47 @@ export interface AdminPromoCode {
   active: boolean;
   createdAt: string;
   createdBy: string | null;
+}
+
+export interface AdminAttraction {
+  name: string;
+  blurb: string;
+  durationMin?: number | null;
+  photoUrl?: string | null;
+}
+export interface AdminTip { title: string; body: string; }
+export interface AdminFaq { question: string; answer: string; }
+
+export interface AdminDestinationContent {
+  id: string;
+  polygonPhpId: string;
+  countryCode: string;
+  citySlug: string;
+  title: string | null;
+  metaDescription: string | null;
+  heroPhotoUrl: string | null;
+  intro: string | null;
+  attractions: AdminAttraction[];
+  tips: AdminTip[];
+  faqs: AdminFaq[];
+  status: 'draft' | 'published';
+  source: 'manual' | 'ai_draft';
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface AdminDestinationContentInput {
+  polygonPhpId: string;
+  countryCode: string;
+  citySlug: string;
+  title?: string | null;
+  metaDescription?: string | null;
+  heroPhotoUrl?: string | null;
+  intro?: string | null;
+  attractions?: AdminAttraction[] | null;
+  tips?: AdminTip[] | null;
+  faqs?: AdminFaq[] | null;
+  status?: 'draft' | 'published';
 }
 
 export interface AdminPromoCodeInput {
