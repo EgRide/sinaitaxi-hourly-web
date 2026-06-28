@@ -131,6 +131,15 @@ export const api = {
   booking: (id: string) =>
     request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}`),
 
+  applyPromoCode: (input: { code: string; subtotal: number; currency: string }) =>
+    request<
+      | { ok: true; code: string; discount: number; reason: 'percent' | 'amount' }
+      | { ok: false; error: 'not_found' | 'inactive' | 'expired' | 'not_yet_valid' | 'min_amount' | 'currency_mismatch' | 'max_uses' }
+    >('/v1/promo-codes/apply', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
   cancelBooking: (id: string, reason?: string) =>
     request<{
       ok: true;
@@ -165,6 +174,7 @@ export interface CheckoutInput {
   customerWhatsapp?: string | null;
   customerComments?: string | null;
   hotelRoomNumber?: string | null;
+  promoCode?: string | null;
   agreedToTerms: true;
 }
 
@@ -206,6 +216,8 @@ export interface BookingDetail {
   daySchedule: { date: string; time: string; hours: number }[] | null;
   includedKm: number;
   retailPrice: number;
+  promoCode: string | null;
+  promoDiscount: number | null;
   currency: string;
   createdAt: string;
   confirmedAt: string | null;

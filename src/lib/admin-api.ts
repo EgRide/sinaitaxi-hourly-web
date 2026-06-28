@@ -189,8 +189,57 @@ export const adminApi = {
   auditLog: (limit = 100) =>
     request<{ entries: AdminAuditEntry[] }>(`/v1/admin/audit-log?limit=${limit}`),
 
+  promoCodes: () => request<{ codes: AdminPromoCode[] }>('/v1/admin/promo-codes'),
+
+  createPromoCode: (input: AdminPromoCodeInput) =>
+    request<{ ok: true; id: string }>('/v1/admin/promo-codes', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updatePromoCode: (id: string, patch: Partial<AdminPromoCodeInput>) =>
+    request<{ ok: true }>(`/v1/admin/promo-codes/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  deactivatePromoCode: (id: string) =>
+    request<{ ok: true }>(`/v1/admin/promo-codes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 };
+
+export interface AdminPromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  percentOff: number | null;
+  amountOff: number | null;
+  currency: string | null;
+  minAmount: number | null;
+  maxUses: number | null;
+  usedCount: number;
+  validFrom: string | null;
+  validUntil: string | null;
+  active: boolean;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export interface AdminPromoCodeInput {
+  code: string;
+  description?: string | null;
+  percentOff?: number | null;
+  amountOff?: number | null;
+  currency?: string | null;
+  minAmount?: number | null;
+  maxUses?: number | null;
+  validFrom?: string | null;          // ISO datetime
+  validUntil?: string | null;
+  active?: boolean;
+}
 
 export { AdminApiError };

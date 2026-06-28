@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { ArrowRight, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, ShieldCheck, AlertCircle, Tag, X, CheckCircle2 } from 'lucide-react';
 import { api, type CheckoutInput, type OfferCard } from '@/lib/api';
 
 type StripePromise = Promise<Stripe | null> | null;
@@ -71,6 +71,52 @@ export const CheckoutForm: React.FC<Props> = (props) => {
   const [comments, setComments] = useState('');
   const [agreed, setAgreed] = useState(false);
 
+  // Promo code: customer-typed `promoInput`, server-confirmed `promo`.
+  // Once `promo` is set we show the discount line item and use it
+  // when computing the total displayed on the Continue button.
+  const [promoInput, setPromoInput] = useState('');
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promo, setPromo] = useState<{ code: string; discount: number } | null>(null);
+
+  const subtotal = props.offer.totalPrice;
+  const total = Math.max(0, Math.round((subtotal - (promo?.discount ?? 0)) * 100) / 100);
+
+  const onApplyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const r = await api.applyPromoCode({ code, subtotal, currency: props.offer.currency });
+      if (r.ok) {
+        setPromo({ code: r.code, discount: r.discount });
+      } else {
+        setPromo(null);
+        const messages: Record<string, string> = {
+          not_found: 'We don’t recognise that code.',
+          inactive: 'That code is no longer active.',
+          expired: 'That code has expired.',
+          not_yet_valid: 'That code isn’t valid yet.',
+          min_amount: 'Your booking doesn’t meet the minimum amount.',
+          currency_mismatch: 'That code can’t be used in this currency.',
+          max_uses: 'That code has been fully redeemed.',
+        };
+        setPromoError(messages[r.error] ?? 'Promo code unavailable.');
+      }
+    } catch (err) {
+      setPromoError((err as Error).message);
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const onClearPromo = () => {
+    setPromo(null);
+    setPromoInput('');
+    setPromoError(null);
+  };
+
   const onStart = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) {
@@ -97,6 +143,7 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         customerWhatsapp: whatsappSameAsPhone ? null : (whatsapp.trim() || null),
         customerComments: comments.trim() || null,
         hotelRoomNumber: hotelRoom.trim() || null,
+        promoCode: promo?.code ?? null,
         agreedToTerms: true,
       };
       const res = await api.checkout(input);
@@ -214,6 +261,44 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         />
       </Field>
 
+      {/* Promo code */}
+      {promo ? (
+        <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span className="inline-flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <strong className="font-mono">{promo.code}</strong> applied — saves {formatPrice(promo.discount, props.offer.currency)}
+          </span>
+          <button type="button" onClick={onClearPromo} className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900">
+            <X className="h-3.5 w-3.5" />
+            Remove
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-ink-200 bg-white px-4 py-3">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Promo code (optional)</span>
+          <div className="mt-1 flex items-center gap-2">
+            <Tag className="h-4 w-4 text-ink-400 flex-shrink-0" />
+            <input
+              value={promoInput}
+              onChange={e => setPromoInput(e.target.value.toUpperCase())}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void onApplyPromo(); } }}
+              placeholder="WELCOME10"
+              className="w-full bg-transparent font-mono text-base outline-none uppercase"
+            />
+            <button
+              type="button"
+              onClick={onApplyPromo}
+              disabled={promoBusy || !promoInput.trim()}
+              className="rounded-xl bg-ink-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-ink-800 disabled:bg-ink-300">
+              {promoBusy ? 'Checking…' : 'Apply'}
+            </button>
+          </div>
+          {promoError ? (
+            <p className="mt-2 text-xs text-red-700">{promoError}</p>
+          ) : null}
+        </div>
+      )}
+
       <label className="flex items-start gap-3 rounded-2xl border border-ink-100 bg-white px-4 py-3 cursor-pointer hover:border-ink-200 transition">
         <input
           type="checkbox"
@@ -244,7 +329,7 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         className="btn-primary w-full !py-3.5 disabled:bg-ink-300 disabled:cursor-not-allowed">
         {busy ? 'Preparing payment…' : (
           <>
-            Continue to payment · {formatPrice(props.offer.totalPrice, props.offer.currency)}
+            Continue to payment · {formatPrice(total, props.offer.currency)}
             <ArrowRight className="h-4 w-4" />
           </>
         )}
