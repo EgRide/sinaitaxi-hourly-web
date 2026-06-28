@@ -35,10 +35,10 @@ export const SiteFooter: React.FC = () => (
       <FooterCol
         title="Company"
         links={[
-          { label: 'Support', href: 'mailto:sales@sinaitaxi.com' },
+          { label: 'Support', href: '/support' },
           { label: 'Privacy', href: '/privacy' },
           { label: 'Terms', href: '/terms' },
-          { label: 'Refunds', href: '/refund-policy' },
+          { label: 'Refunds', href: '/refunds' },
         ]}
       />
     </div>

@@ -27,7 +27,7 @@ const CITIES: City[] = [
     name: 'Sharm El Sheikh',
     countryName: 'Egypt',
     tagline: 'Coastal days, desert evenings.',
-    unsplash: 'photo-1581281657260-87cca3a0bff7',
+    unsplash: 'photo-1572252009286-268acec5ca0a',
   },
   {
     country: 'ae',

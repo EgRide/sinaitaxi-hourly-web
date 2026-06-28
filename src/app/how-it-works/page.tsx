@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, MapPin, Search, Car, Receipt } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -22,7 +21,7 @@ const STEPS = [
       'Type a hotel, an address, a landmark. We resolve the location to a service area instantly using Google Places — no fiddly country and city pickers, no list-scrolling.',
     detail:
       'If you\'re in a city we don\'t cover yet, you\'ll see that on the spot. Honesty up-front.',
-    unsplash: 'photo-1469854523086-cc02fe5d8800',
+    unsplash: 'photo-1494522855154-9297ac14b55f',
   },
   {
     n: '02',
@@ -32,7 +31,7 @@ const STEPS = [
       'From one hour up to fourteen consecutive days. Multi-day bookings let you set different hours for each day — a few hours every morning, a longer outing on day three, anything you need.',
     detail:
       'KM allowance scales with the time you book. No surprise distance caps.',
-    unsplash: 'photo-1517524008697-84bbe3c3fd98',
+    unsplash: 'photo-1454165804606-c3d57bc86b40',
   },
   {
     n: '03',
@@ -52,7 +51,7 @@ const STEPS = [
       'Stripe checkout, full amount up-front. Your driver is locked instantly. Driver name + phone + vehicle land in your inbox before pickup. Trip starts when they meet you.',
     detail:
       'Any KM beyond your included allowance is charged automatically after the trip via the card on file. No paperwork, no surprises.',
-    unsplash: 'photo-1486299267070-83823f5448dd',
+    unsplash: 'photo-1556742049-0cfed4f6a45d',
   },
 ];
 
@@ -82,14 +81,13 @@ export default function HowItWorksPage() {
             {STEPS.map((s, idx) => (
               <li key={s.n} className={`grid items-center gap-10 ${idx % 2 ? 'lg:grid-cols-[1.2fr_1fr]' : 'lg:grid-cols-[1fr_1.2fr]'}`}>
                 <div className={idx % 2 ? 'lg:order-2' : ''}>
-                  <div className="relative aspect-[5/4] overflow-hidden rounded-3xl bg-metal-100 shadow-soft">
-                    <Image
-                      src={`https://images.unsplash.com/${s.unsplash}?w=1400&q=70&auto=format`}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1024px) 50vw, 100vw"
-                      className="object-cover"
-                      unoptimized
+                  <div className="aspect-[5/4] min-h-[320px] overflow-hidden rounded-3xl bg-ink-100 shadow-soft">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://images.unsplash.com/${s.unsplash}?w=1400&q=70`}
+                      alt={s.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 </div>

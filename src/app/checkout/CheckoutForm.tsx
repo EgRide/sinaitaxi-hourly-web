@@ -62,6 +62,13 @@ export const CheckoutForm: React.FC<Props> = (props) => {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  // WhatsApp defaults to phone via a checkbox. When ticked we
+  // submit `customerWhatsapp: null` and the backend treats it as
+  // "same as phone".
+  const [whatsappSameAsPhone, setWhatsappSameAsPhone] = useState(true);
+  const [whatsapp, setWhatsapp] = useState('');
+  const [hotelRoom, setHotelRoom] = useState('');
+  const [comments, setComments] = useState('');
   const [agreed, setAgreed] = useState(false);
 
   const onStart = async (e: React.FormEvent) => {
@@ -86,7 +93,10 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         pickupLng: props.pickupLng,
         customerEmail: email.trim(),
         customerName: `${firstName.trim()} ${lastName.trim()}`.trim(),
-        customerPhone: phone.trim() || null,
+        customerPhone: phone.trim(),
+        customerWhatsapp: whatsappSameAsPhone ? null : (whatsapp.trim() || null),
+        customerComments: comments.trim() || null,
+        hotelRoomNumber: hotelRoom.trim() || null,
         agreedToTerms: true,
       };
       const res = await api.checkout(input);
@@ -148,13 +158,59 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         />
       </Field>
 
-      <Field label="Phone (optional — driver may text or call)">
+      <Field label="Phone — driver will text or call you">
         <input
           type="tel"
           value={phone}
           onChange={e => setPhone(e.target.value)}
+          required
+          placeholder="+20 100 123 4567"
           autoComplete="tel"
           className="w-full bg-transparent text-base outline-none"
+        />
+      </Field>
+
+      <label className="-mt-1 flex items-center gap-3 rounded-2xl border border-ink-100 bg-white px-4 py-3 cursor-pointer hover:border-ink-200 transition">
+        <input
+          type="checkbox"
+          checked={whatsappSameAsPhone}
+          onChange={e => setWhatsappSameAsPhone(e.target.checked)}
+          className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500 focus:ring-2 cursor-pointer"
+        />
+        <span className="text-sm text-ink-700">
+          My WhatsApp is the same as my phone number
+        </span>
+      </label>
+
+      {!whatsappSameAsPhone ? (
+        <Field label="WhatsApp number">
+          <input
+            type="tel"
+            value={whatsapp}
+            onChange={e => setWhatsapp(e.target.value)}
+            placeholder="+20 100 123 4567"
+            className="w-full bg-transparent text-base outline-none"
+          />
+        </Field>
+      ) : null}
+
+      <Field label="Hotel & room number (optional)">
+        <input
+          type="text"
+          value={hotelRoom}
+          onChange={e => setHotelRoom(e.target.value)}
+          placeholder="Room 402"
+          className="w-full bg-transparent text-base outline-none"
+        />
+      </Field>
+
+      <Field label="Notes for the driver (optional)">
+        <textarea
+          value={comments}
+          onChange={e => setComments(e.target.value)}
+          rows={3}
+          placeholder="Flight number, child seat, special requests…"
+          className="w-full resize-none bg-transparent text-base outline-none"
         />
       </Field>
 
@@ -169,7 +225,7 @@ export const CheckoutForm: React.FC<Props> = (props) => {
           I have read and agree to the{' '}
           <Link href="/terms" target="_blank" className="font-semibold text-brand-600 hover:text-brand-700 underline-offset-2 hover:underline">Terms of Service</Link>
           {' '}and{' '}
-          <Link href="/refund-policy" target="_blank" className="font-semibold text-brand-600 hover:text-brand-700 underline-offset-2 hover:underline">Refund Policy</Link>.
+          <Link href="/refunds" target="_blank" className="font-semibold text-brand-600 hover:text-brand-700 underline-offset-2 hover:underline">Refund Policy</Link>.
           I understand that <strong>cancellations within 24 hours of pickup are non-refundable</strong>, and that
           customer no-show (more than 60 minutes late) is treated the same way.
         </span>

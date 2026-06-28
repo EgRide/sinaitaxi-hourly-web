@@ -22,7 +22,7 @@ type Params = Promise<{ country: string; city: string }>;
 // generic coastal road if we don't have an editorial pick for a
 // country yet. Real licensed photography swaps in at launch.
 const COUNTRY_HERO: Record<string, string> = {
-  eg: 'photo-1581281657260-87cca3a0bff7',
+  eg: 'photo-1572252009286-268acec5ca0a',
   ae: 'photo-1512453979798-5ea266f8880c',
   sa: 'photo-1578895101408-1a36b834405b',
   gb: 'photo-1486299267070-83823f5448dd',

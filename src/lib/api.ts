@@ -160,7 +160,11 @@ export interface CheckoutInput {
   pickupLng?: number | null;
   customerEmail: string;
   customerName: string;
-  customerPhone?: string | null;
+  customerPhone: string;
+  // null = "same as customerPhone"
+  customerWhatsapp?: string | null;
+  customerComments?: string | null;
+  hotelRoomNumber?: string | null;
   agreedToTerms: true;
 }
 
@@ -186,6 +190,10 @@ export interface BookingDetail {
   status: BookingStatus;
   customerEmail: string;
   customerName: string | null;
+  customerPhone: string | null;
+  customerWhatsapp: string | null;
+  customerComments: string | null;
+  hotelRoomNumber: string | null;
   countryCode: string;
   polygonId: string;
   polygonName: string;
