@@ -143,6 +143,12 @@ export const api = {
       { next: { revalidate: 600 } },                         // 10-min ISR
     ),
 
+  featuredDestinations: (limit = 9) =>
+    request<{ destinations: FeaturedDestination[] }>(
+      `/v1/destinations/featured?limit=${limit}`,
+      { next: { revalidate: 600 } },
+    ),
+
   applyPromoCode: (input: { code: string; subtotal: number; currency: string }) =>
     request<
       | { ok: true; code: string; discount: number; reason: 'percent' | 'amount' }
@@ -286,6 +292,16 @@ export interface Attraction {
 }
 export interface DestinationTip { title: string; body: string; }
 export interface DestinationFaq { question: string; answer: string; }
+
+export interface FeaturedDestination {
+  polygonPhpId: string;
+  countryCode: string;          // lowercase
+  countryName: string;
+  citySlug: string;
+  title: string | null;
+  tagline: string | null;
+  heroPhotoUrl: string | null;
+}
 
 export interface DestinationContent {
   title: string | null;

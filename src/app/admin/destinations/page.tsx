@@ -190,6 +190,11 @@ const DestinationsList: React.FC = () => {
                         AI draft
                       </span>
                     ) : null}
+                    {r.isFeatured ? (
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-700">
+                        ★ Homepage
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 text-xs text-ink-500">
                     /destinations/{r.countryCode.toLowerCase()}/{r.citySlug}

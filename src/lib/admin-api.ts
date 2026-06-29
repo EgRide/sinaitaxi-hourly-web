@@ -285,12 +285,15 @@ export interface AdminDestinationContent {
   title: string | null;
   metaDescription: string | null;
   heroPhotoUrl: string | null;
+  tagline: string | null;
   intro: string | null;
   attractions: AdminAttraction[];
   tips: AdminTip[];
   faqs: AdminFaq[];
   status: 'draft' | 'published';
   source: 'manual' | 'ai_draft';
+  isFeatured: boolean;
+  sortOrder: number;
   updatedAt: string;
   updatedBy: string | null;
 }
@@ -302,11 +305,14 @@ export interface AdminDestinationContentInput {
   title?: string | null;
   metaDescription?: string | null;
   heroPhotoUrl?: string | null;
+  tagline?: string | null;
   intro?: string | null;
   attractions?: AdminAttraction[] | null;
   tips?: AdminTip[] | null;
   faqs?: AdminFaq[] | null;
   status?: 'draft' | 'published';
+  isFeatured?: boolean;
+  sortOrder?: number;
 }
 
 export interface AdminPromoCodeInput {

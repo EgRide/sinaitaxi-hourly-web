@@ -33,6 +33,9 @@ export const DestinationEditor: React.FC<Props> = ({ mode, initial }) => {
   const [title, setTitle] = useState(initial?.title ?? '');
   const [metaDescription, setMetaDescription] = useState(initial?.metaDescription ?? '');
   const [heroPhotoUrl, setHeroPhotoUrl] = useState(initial?.heroPhotoUrl ?? '');
+  const [tagline, setTagline] = useState(initial?.tagline ?? '');
+  const [isFeatured, setIsFeatured] = useState(initial?.isFeatured ?? false);
+  const [sortOrder, setSortOrder] = useState(String(initial?.sortOrder ?? 0));
   const [intro, setIntro] = useState(initial?.intro ?? '');
   const [attractions, setAttractions] = useState<AdminAttraction[]>(initial?.attractions ?? []);
   const [tips, setTips] = useState<AdminTip[]>(initial?.tips ?? []);
@@ -55,11 +58,14 @@ export const DestinationEditor: React.FC<Props> = ({ mode, initial }) => {
       title: title.trim() || null,
       metaDescription: metaDescription.trim() || null,
       heroPhotoUrl: heroPhotoUrl.trim() || null,
+      tagline: tagline.trim() || null,
       intro: intro.trim() || null,
       attractions,
       tips,
       faqs,
       status: nextStatus,
+      isFeatured,
+      sortOrder: Number(sortOrder) || 0,
     };
     try {
       if (mode === 'create') {
@@ -181,6 +187,38 @@ export const DestinationEditor: React.FC<Props> = ({ mode, initial }) => {
               value={heroPhotoUrl}
               onChange={e => setHeroPhotoUrl(e.target.value)}
               placeholder="https://images.unsplash.com/photo-XXXX?w=2400"
+              className="w-full bg-transparent text-base outline-none"
+            />
+          </Field>
+        </div>
+      </Card>
+
+      {/* ── Homepage card ─────────────────────────────────── */}
+      <Card title="2b. Homepage card" subtitle="Tick to surface this destination on the homepage strip.">
+        <label className="flex items-center gap-3 rounded-2xl border border-ink-100 bg-white px-4 py-3 cursor-pointer hover:border-ink-200 transition">
+          <input
+            type="checkbox"
+            checked={isFeatured}
+            onChange={e => setIsFeatured(e.target.checked)}
+            className="h-4 w-4 rounded border-ink-300 text-brand-600"
+          />
+          <span className="text-sm font-semibold text-ink-800">Show on homepage</span>
+        </label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[2fr_1fr]">
+          <Field label="Tagline (overrides meta on the card)">
+            <input
+              value={tagline}
+              onChange={e => setTagline(e.target.value)}
+              maxLength={180}
+              placeholder="Coastal days, desert evenings."
+              className="w-full bg-transparent text-base outline-none"
+            />
+          </Field>
+          <Field label="Sort order (ascending)">
+            <input
+              type="number" min={0} step={1}
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value)}
               className="w-full bg-transparent text-base outline-none"
             />
           </Field>
