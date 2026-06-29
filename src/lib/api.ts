@@ -38,7 +38,7 @@ const request = async <T>(path: string, init: RequestOpts = {}): Promise<T> => {
   return res.json() as Promise<T>;
 };
 
-export interface Country { code: string; name: string; }
+export interface Country { code: string; name: string; polygonCount?: number; }
 export interface Polygon { id: string; name: string; slug: string | null; }
 export interface VehicleClass {
   id: number;
