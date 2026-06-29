@@ -261,6 +261,53 @@ export const adminApi = {
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 
+  // ── Price rules (cross-supplier) ───────────────────────
+  priceRules: (filters: AdminPriceRuleFilters = {}) => {
+    const params: Record<string, string | undefined> = {};
+    for (const [k, v] of Object.entries(filters)) {
+      if (v === undefined || v === null || v === '') continue;
+      params[k] = String(v);
+    }
+    return request<{ total: number; page: number; pageSize: number; rules: AdminPriceRule[] }>(
+      `/v1/admin/price-rules${buildQuery(params)}`,
+    );
+  },
+  priceRule: (id: string) =>
+    request<{ rule: AdminPriceRule }>(`/v1/admin/price-rules/${encodeURIComponent(id)}`),
+  createPriceRule: (input: AdminPriceRuleInput) =>
+    request<{ id: string }>('/v1/admin/price-rules', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updatePriceRule: (id: string, input: Partial<AdminPriceRuleInput>) =>
+    request<{ ok: true }>(`/v1/admin/price-rules/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deletePriceRule: (id: string) =>
+    request<{ ok: true }>(`/v1/admin/price-rules/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
+  priceRulesExportUrl: (): string => `${BASE}/v1/admin/price-rules/export.csv`,
+  priceRulesSampleUrl: (): string => `${BASE}/v1/admin/price-rules/sample.csv`,
+  importPriceRules: async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const token = adminSession.token;
+    const res = await fetch(`${BASE}/v1/admin/price-rules/import`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+    if (!res.ok) {
+      let body: { error?: string; message?: string } | undefined;
+      try { body = await res.json(); } catch { /* non-JSON */ }
+      throw new AdminApiError(res.status, body?.message ?? body?.error ?? `Import failed (${res.status})`, body);
+    }
+    return res.json() as Promise<{ created: number; updated: number; errors: { key: string; error: string }[] }>;
+  },
+
   suppliers: () =>
     request<{ suppliers: AdminSupplier[] }>('/v1/admin/suppliers'),
 
@@ -315,6 +362,47 @@ export interface AdminPromoCode {
   createdAt: string;
   createdBy: string | null;
 }
+
+export interface AdminPriceRule {
+  id: string;
+  partnerPhpId: string;
+  name: string | null;
+  currency: string;
+  active: boolean;
+  validFrom: string | null;
+  validTo: string | null;
+  marginHours: number;
+  minHours: number;
+  maxHours: number;
+  createdAt: string;
+  updatedAt: string;
+  polygonPhpIds: string[];
+  prices: { vehicleClass: string; hourlyRate: number; includedKmPerHour: number }[];
+}
+
+export interface AdminPriceRuleInput {
+  partnerPhpId: string;
+  name?: string | null;
+  currency: string;
+  active?: boolean;
+  validFrom?: string | null;
+  validTo?: string | null;
+  marginHours?: number;
+  minHours?: number;
+  maxHours?: number;
+  polygonPhpIds: string[];
+  prices: { vehicleClass: string; hourlyRate: number; includedKmPerHour: number }[];
+}
+
+export type AdminPriceRuleFilters = {
+  partnerPhpId?: string;
+  polygonPhpId?: string;
+  vehicleClass?: string;
+  active?: 'true' | 'false';
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
 
 export interface AdminCountryDetail {
   country: AdminCountry;

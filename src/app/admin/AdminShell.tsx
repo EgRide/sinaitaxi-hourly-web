@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, BookOpen, Settings, ScrollText, LogOut, Loader2, Tag, MapPin, Users } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Settings, ScrollText, LogOut, Loader2, Tag, MapPin, Users, ListTree } from 'lucide-react';
 import { adminApi, adminSession, type AdminIdentity, AdminApiError } from '@/lib/admin-api';
 import { cn } from '@/lib/cn';
 
@@ -59,6 +59,7 @@ export const AdminShell: React.FC<Props> = ({ children }) => {
             <NavLink href="/admin" pathname={pathname} icon={<LayoutDashboard className="h-4 w-4" />}>Dashboard</NavLink>
             <NavLink href="/admin/bookings" pathname={pathname} icon={<BookOpen className="h-4 w-4" />}>Bookings</NavLink>
             <NavLink href="/admin/suppliers" pathname={pathname} icon={<Users className="h-4 w-4" />}>Suppliers</NavLink>
+            <NavLink href="/admin/price-rules" pathname={pathname} icon={<ListTree className="h-4 w-4" />}>Price rules</NavLink>
             <NavLink href="/admin/promo-codes" pathname={pathname} icon={<Tag className="h-4 w-4" />}>Promo codes</NavLink>
             <NavLink href="/admin/destinations" pathname={pathname} icon={<MapPin className="h-4 w-4" />}>Destinations</NavLink>
             <NavLink href="/admin/audit-log" pathname={pathname} icon={<ScrollText className="h-4 w-4" />}>Audit log</NavLink>
@@ -73,6 +74,7 @@ export const AdminShell: React.FC<Props> = ({ children }) => {
             <NavLink href="/admin" pathname={pathname} compact>Dashboard</NavLink>
             <NavLink href="/admin/bookings" pathname={pathname} compact>Bookings</NavLink>
             <NavLink href="/admin/suppliers" pathname={pathname} compact>Suppliers</NavLink>
+            <NavLink href="/admin/price-rules" pathname={pathname} compact>Rules</NavLink>
             <NavLink href="/admin/promo-codes" pathname={pathname} compact>Promos</NavLink>
             <NavLink href="/admin/destinations" pathname={pathname} compact>Destinations</NavLink>
             <NavLink href="/admin/audit-log" pathname={pathname} compact>Audit</NavLink>
