@@ -165,6 +165,8 @@ export const adminApi = {
 
   stats: () => request<AdminStats>('/v1/admin/stats'),
 
+  dashboard: (days = 30) => request<AdminDashboard>(`/v1/admin/stats/dashboard?days=${days}`),
+
   bookings: (filters: AdminBookingsFilters = {}) =>
     request<{ bookings: AdminBookingRow[]; count: number }>(`/v1/admin/bookings${buildQuery(filters)}`),
 
@@ -309,6 +311,35 @@ export interface AdminPromoCode {
   active: boolean;
   createdAt: string;
   createdBy: string | null;
+}
+
+export interface AdminDashboard {
+  windowDays: number;
+  kpis: {
+    revenue:    { current: number; previous: number };
+    bookings:   { current: number; previous: number };
+    aov:        { current: number; previous: number };
+    commission: { current: number; previous: number };
+    todayPickups: number;
+    tomorrowPickups: number;
+  };
+  funnel: {
+    pending: number; confirmed: number; started: number;
+    completed: number; settled: number;
+    cancelled: number; refunded: number; no_show: number;
+  };
+  series: { date: string; revenue: number; bookings: number }[];
+  leaderboards: {
+    suppliers:      { partnerPhpId: string; bookings: number; revenue: number; wholesale: number }[];
+    polygons:       { phpId: string; name: string; countryCode: string | null; bookings: number; revenue: number }[];
+    vehicleClasses: { slug: string; name: string; bookings: number; revenue: number }[];
+  };
+  activity: {
+    id: string; bookingId: string; actor: string; action: string;
+    fromStatus: string | null; toStatus: string | null; at: string;
+  }[];
+  pending: { refundsPending: number; bookingsStuck: number };
+  activeStatuses: number;
 }
 
 export interface AdminAttraction {

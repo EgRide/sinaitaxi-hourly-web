@@ -130,6 +130,8 @@ export const partnerApi = {
 
   bookings: () => request<{ bookings: PartnerBookingRow[] }>('/v1/partner/bookings'),
 
+  dashboard: (days = 30) => request<PartnerDashboard>(`/v1/partner/dashboard?days=${days}`),
+
   bookingDetail: (id: string) =>
     request<{ booking: PartnerBookingDetail }>(`/v1/partner/bookings/${encodeURIComponent(id)}`),
 
@@ -190,6 +192,58 @@ export interface PartnerBookingDetail {
   overageAmount: number | null;
   overageChargeId: string | null;
   createdAt: string;
+}
+
+export interface PartnerDashboardTrip {
+  id: string;
+  pickupAt: string;
+  pickupAddress: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  vehicleClass: string;
+  driverName: string | null;
+}
+
+export interface PartnerDashboard {
+  windowDays: number;
+  kpis: {
+    earnings:        { current: number; previous: number };
+    bookings:        { current: number; previous: number };
+    avgBookingValue: { current: number; previous: number };
+    todayPickups: number;
+    tomorrowPickups: number;
+  };
+  funnel: {
+    pending: number; confirmed: number; started: number;
+    completed: number; settled: number;
+    cancelled: number; refunded: number; no_show: number;
+  };
+  series: { date: string; revenue: number; bookings: number }[];
+  settlement: {
+    monthToDateWholesale: number;
+    monthToDateBookings: number;
+    nextSettlementOn: string;
+  };
+  tripsToday: PartnerDashboardTrip[];
+  tripsTomorrow: PartnerDashboardTrip[];
+  driversToAssign: {
+    id: string;
+    pickupAt: string;
+    pickupAddress: string;
+    customerName: string | null;
+    vehicleClass: string;
+  }[];
+  leaderboards: {
+    polygons: { phpId: string; name: string; countryCode: string | null; bookings: number; revenue: number }[];
+    vehicleClasses: { slug: string; name: string; bookings: number; revenue: number }[];
+  };
+  peerBenchmark: {
+    countryCode: string | null;
+    peerCount: number;
+    median: number;
+    myEarnings: number;
+    percentile: number | null;
+  };
 }
 
 export { PartnerApiError };
