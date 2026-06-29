@@ -12,9 +12,10 @@ import { Flag } from '@/components/Flag';
 import type { Country } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
-// ISO-2 grouping. Codes not in any region still show under "All".
+// ISO-2 grouping by region. Default region is picked at render time
+// as whichever has the most operating countries — keeps the strip
+// from opening on an empty tab.
 const REGIONS: { id: string; label: string; codes: string[] }[] = [
-  { id: 'all',      label: 'All',         codes: [] },
   { id: 'europe',   label: 'Europe',
     codes: ['AL','AT','BA','BE','BG','BY','CH','CY','CZ','DE','DK','EE','ES','FI','FR','GB','GR','HR','HU','IE','IS','IT','LT','LU','LV','MD','ME','MK','MT','NL','NO','PL','PT','RO','RS','RU','SE','SI','SK','UA','VA','XK'] },
   { id: 'asia',     label: 'Asia',
@@ -33,8 +34,6 @@ interface Props {
 }
 
 export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
-  const [region, setRegion] = useState<string>('all');
-
   // Sort: highest polygon count first, then alphabetical. Brings
   // mature markets (EG, AE, etc.) to the top of every filter.
   const sortedAll = useMemo(() => {
@@ -46,8 +45,22 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
     });
   }, [countries]);
 
+  // Open on whichever region has the most live operating countries
+  // — never on an empty tab.
+  const defaultRegion = useMemo(() => {
+    const codeSet = new Set(countries.map(c => c.code));
+    let bestId = REGIONS[0]!.id;
+    let bestCount = -1;
+    for (const r of REGIONS) {
+      const n = r.codes.reduce((acc, code) => acc + (codeSet.has(code) ? 1 : 0), 0);
+      if (n > bestCount) { bestCount = n; bestId = r.id; }
+    }
+    return bestId;
+  }, [countries]);
+
+  const [region, setRegion] = useState<string>(defaultRegion);
+
   const filtered = useMemo(() => {
-    if (region === 'all') return sortedAll;
     const def = REGIONS.find(r => r.id === region);
     if (!def) return sortedAll;
     const set = new Set(def.codes);
@@ -68,7 +81,7 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
           </p>
         </div>
         <p className="text-sm text-ink-500 md:max-w-[200px] md:text-right">
-          {filtered.length} of {countries.length} countries{region === 'all' ? '' : ` in ${REGIONS.find(r => r.id === region)?.label}`}.
+          {filtered.length} of {countries.length} countries in {REGIONS.find(r => r.id === region)?.label}.
         </p>
       </div>
 
