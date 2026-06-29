@@ -389,13 +389,14 @@ const SupplierEditor: React.FC<{ supplier: AdminSupplier; onSaved: () => void }>
 const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId }) => {
   const [data, setData] = useState<{
     customExtras: AdminSupplierExtra[];
-    childSeats: { id: string; name: string; price: number; currency: string; active: boolean }[];
+    childSeats: AdminSupplierExtra[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   // Draft for the inline "Add extra" form.
+  const [newKind, setNewKind] = useState<'general' | 'child_seat'>('general');
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newPrice, setNewPrice] = useState('5.00');
@@ -422,8 +423,9 @@ const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId 
         description: newDesc.trim() || null,
         price: Number(newPrice) || 0,
         currency: newCurrency.toUpperCase(),
+        kind: newKind,
       });
-      setNewName(''); setNewDesc(''); setNewPrice('5.00');
+      setNewName(''); setNewDesc(''); setNewPrice('5.00'); setNewKind('general');
       setAdding(false);
       await reload();
     } catch (err) {
@@ -439,8 +441,8 @@ const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId 
         <div>
           <h4 className="text-sm font-bold text-ink-900">Booking extras</h4>
           <p className="text-[11px] text-ink-500">
-            Hourly-only add-ons are managed here. Child seats below are read-only and come live from the
-            main Sinai Taxi system.
+            Add-ons and child seats are managed here per supplier. Child seats show in the storefront's
+            "Child seats" section (0–3 each); add-ons are a toggle.
           </p>
         </div>
         <button
@@ -460,11 +462,27 @@ const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId 
 
       {/* Add form */}
       {adding ? (
-        <form onSubmit={onCreate} className="mt-3 grid gap-2 rounded-xl border border-ink-200 bg-white p-3 sm:grid-cols-[2fr_1fr_80px_auto]">
+        <form onSubmit={onCreate} className="mt-3 flex flex-col gap-2 rounded-xl border border-ink-200 bg-white p-3">
+          {/* Type toggle: child seat vs general add-on */}
+          <div className="flex gap-1.5">
+            {([
+              { k: 'general' as const, label: 'Add-on' },
+              { k: 'child_seat' as const, label: 'Child seat' },
+            ]).map(({ k, label }) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setNewKind(k)}
+                className={`rounded-lg px-3 py-1 text-xs font-bold ${newKind === k ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-700 hover:bg-ink-200'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[2fr_1fr_80px_auto]">
           <input
             value={newName}
             onChange={e => setNewName(e.target.value)}
-            placeholder="Extra name (e.g. In-car WiFi)"
+            placeholder={newKind === 'child_seat' ? 'Seat name (e.g. Infant 0–3y)' : 'Add-on name (e.g. In-car WiFi)'}
             className="rounded-lg border border-ink-200 px-3 py-1.5 text-sm outline-none focus:border-brand-500"
             required
           />
@@ -498,6 +516,7 @@ const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId 
               Save
             </button>
           </div>
+          </div>
         </form>
       ) : null}
 
@@ -520,26 +539,16 @@ const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId 
           </ul>
         )}
 
-        {/* Child seats — read-only */}
-        <h5 className="mt-4 text-[10px] font-bold uppercase tracking-wider text-ink-500">Child seats (from PHP)</h5>
+        {/* Child seats */}
+        <h5 className="mt-4 text-[10px] font-bold uppercase tracking-wider text-ink-500">Child seats</h5>
         {loading ? null : !data || data.childSeats.length === 0 ? (
           <p className="rounded-lg border border-dashed border-ink-200 px-3 py-3 text-xs text-ink-500">
-            No child seats attached on the PHP side, or PHP didn't return them.
+            No child seats yet. Use “Add extra” → Child seat to publish one (Infant, Forward-facing, Booster…).
           </p>
         ) : (
           <ul className="space-y-1.5">
-            {data.childSeats.map(s => (
-              <li key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-100 bg-white px-3 py-2 text-xs">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-ink-900">{s.name}</p>
-                  <p className="text-[10px] text-ink-500">
-                    PHP id #{s.id}{s.active ? '' : ' · inactive'}
-                  </p>
-                </div>
-                <span className="font-mono text-xs font-bold text-ink-900">
-                  {s.price.toFixed(2)} {s.currency}
-                </span>
-              </li>
+            {data.childSeats.map(ex => (
+              <ExtraRow key={ex.id} partnerPhpId={partnerPhpId} extra={ex} onChanged={reload} />
             ))}
           </ul>
         )}

@@ -318,7 +318,7 @@ export const adminApi = {
     }),
 
   supplierExtras: (phpId: string) =>
-    request<{ customExtras: AdminSupplierExtra[]; childSeats: { id: string; name: string; price: number; currency: string; active: boolean }[] }>(
+    request<{ customExtras: AdminSupplierExtra[]; childSeats: AdminSupplierExtra[] }>(
       `/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras`,
     ),
 
@@ -368,6 +368,7 @@ export interface AdminSupplierExtra {
   description: string | null;
   price: number;
   currency: string;
+  kind: 'general' | 'child_seat';
   active: boolean;
   sortOrder: number;
   updatedAt: string;
@@ -378,6 +379,7 @@ export interface AdminSupplierExtraInput {
   description?: string | null;
   price: number;
   currency: string;
+  kind?: 'general' | 'child_seat';
   active?: boolean;
   sortOrder?: number;
 }
