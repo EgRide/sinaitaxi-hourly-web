@@ -167,6 +167,9 @@ export const adminApi = {
 
   dashboard: (days = 30) => request<AdminDashboard>(`/v1/admin/stats/dashboard?days=${days}`),
 
+  countryDetail: (code: string, days = 30) =>
+    request<AdminCountryDetail>(`/v1/admin/countries/${encodeURIComponent(code)}/detail?days=${days}`),
+
   bookings: (filters: AdminBookingsFilters = {}) =>
     request<{ bookings: AdminBookingRow[]; count: number }>(`/v1/admin/bookings${buildQuery(filters)}`),
 
@@ -311,6 +314,34 @@ export interface AdminPromoCode {
   active: boolean;
   createdAt: string;
   createdBy: string | null;
+}
+
+export interface AdminCountryDetail {
+  country: AdminCountry;
+  coverage: { totalPolygons: number; activePolygons: number; activeSuppliers: number };
+  windowDays: number;
+  kpis: {
+    revenue:    { current: number; previous: number };
+    bookings:   { current: number; previous: number };
+    aov:        { current: number; previous: number };
+    commission: { current: number; previous: number };
+  };
+  funnel: Record<string, number>;
+  series: { date: string; revenue: number; bookings: number }[];
+  topSuppliers: { partnerPhpId: string; bookings: number; revenue: number; wholesale: number }[];
+  recentBookings: {
+    id: string;
+    status: string;
+    customerEmail: string;
+    customerName: string | null;
+    pickupAt: string;
+    polygonName: string;
+    vehicleClass: string;
+    retailPrice: number;
+    currency: string;
+    partnerPhpId: string | null;
+    createdAt: string;
+  }[];
 }
 
 export interface AdminDashboard {

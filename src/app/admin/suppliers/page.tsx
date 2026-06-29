@@ -13,7 +13,10 @@ import {
   Activity, DollarSign, TrendingUp, EyeOff, Building2, Phone, Mail, MessageCircle,
 } from 'lucide-react';
 import { adminApi, type AdminSupplier } from '@/lib/admin-api';
+import { Pagination } from '@/components/Pagination';
 import { AdminShell } from '../AdminShell';
+
+const PAGE_SIZE = 20;
 
 export default function SuppliersAdminPage() {
   return (
@@ -31,6 +34,10 @@ const SuppliersScreen: React.FC = () => {
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<Scope>('all');
   const [editingPhpId, setEditingPhpId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  // Reset to first page when filters change.
+  useEffect(() => { setPage(1); }, [query, scope]);
 
   const reload = () => {
     setRows(null);
@@ -140,7 +147,7 @@ const SuppliersScreen: React.FC = () => {
         <>
           <p className="text-xs text-ink-500">{filtered.length} of {rows?.length ?? 0} suppliers.</p>
           <ul className="space-y-3">
-            {filtered.map(s => (
+            {filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(s => (
               <SupplierRow
                 key={s.partnerPhpId}
                 supplier={s}
@@ -151,6 +158,12 @@ const SuppliersScreen: React.FC = () => {
               />
             ))}
           </ul>
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            onChange={setPage}
+          />
         </>
       )}
     </div>

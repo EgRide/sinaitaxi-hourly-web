@@ -1,30 +1,42 @@
 'use client';
 
+// Country settings — compact row layout with search, scope filter,
+// and pagination. Click any row to drill into the country detail
+// page with full analytics.
+
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Save, AlertCircle, CheckCircle2, Search, Globe } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, AlertCircle, Search, Globe, ChevronRight, CheckCircle2, PauseCircle } from 'lucide-react';
 import { adminApi, type AdminCountry } from '@/lib/admin-api';
 import { Flag } from '@/components/Flag';
+import { Pagination } from '@/components/Pagination';
 import { AdminShell } from '../../AdminShell';
+
+const PAGE_SIZE = 20;
 
 export default function CountrySettingsPage() {
   return (
     <AdminShell>
-      <CountriesEditor />
+      <CountriesList />
     </AdminShell>
   );
 }
 
-const CountriesEditor: React.FC = () => {
+const CountriesList: React.FC = () => {
   const [countries, setCountries] = useState<AdminCountry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'all' | 'active' | 'disabled'>('all');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     adminApi.countries()
       .then(r => setCountries(r.countries))
       .catch((e: Error) => setError(e.message));
   }, []);
+
+  // Reset to page 1 whenever filters change.
+  useEffect(() => { setPage(1); }, [query, scope]);
 
   const filtered = useMemo(() => {
     if (!countries) return null;
@@ -39,16 +51,23 @@ const CountriesEditor: React.FC = () => {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [countries, query, scope]);
 
+  const visible = useMemo(() => {
+    if (!filtered) return null;
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
   return (
-    <div>
+    <div className="space-y-5">
       <header>
-        <h1 className="text-3xl font-extrabold tracking-tighter">Country settings</h1>
+        <h1 className="text-3xl font-extrabold tracking-tightest text-ink-900">Country settings</h1>
         <p className="mt-1 text-sm text-ink-500">
-          Every country PHP exposes is listed below. Commission %, overage rate, and active state per country — changes take effect immediately for new bookings.
+          Every country PHP exposes is listed below. Click a row to drill in: live analytics, top
+          suppliers, recent bookings, and commission settings.
         </p>
       </header>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <label className="flex flex-1 items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-2.5 focus-within:border-brand-500">
           <Search className="h-4 w-4 text-ink-400" />
           <input
@@ -70,115 +89,83 @@ const CountriesEditor: React.FC = () => {
         </div>
       </div>
 
-      {error ? <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-
-      {!filtered ? (
-        <div className="mt-6 inline-flex items-center gap-2 text-sm text-ink-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading countries…
+      {error ? (
+        <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 mt-0.5" />
+          {error}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-ink-200 bg-white p-10 text-center">
+      ) : null}
+
+      {!visible ? (
+        <div className="rounded-2xl border border-ink-100 bg-white p-8 text-center text-sm text-ink-500">
+          <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+          <p className="mt-3">Loading countries…</p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-ink-200 bg-white p-10 text-center">
           <Globe className="mx-auto h-8 w-8 text-ink-300" />
           <p className="mt-3 text-sm font-semibold text-ink-700">No countries match this filter.</p>
         </div>
       ) : (
         <>
-          <p className="mt-4 text-xs text-ink-500">
-            Showing {filtered.length} of {countries?.length ?? 0} countries.
-          </p>
-          <ul className="mt-3 space-y-3">
-            {filtered.map(c => <CountryRow key={c.code} country={c} />)}
+          {/* Compact rows. Header row only on lg+. */}
+          <div className="hidden grid-cols-[1fr_auto_auto_auto_auto_24px] gap-4 rounded-2xl bg-ink-50/60 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-ink-500 lg:grid">
+            <span>Country</span>
+            <span className="w-20 text-right">Commission</span>
+            <span className="w-24 text-right">Overage / km</span>
+            <span className="w-16 text-right">Currency</span>
+            <span className="w-20 text-right">Status</span>
+            <span />
+          </div>
+          <ul className="divide-y divide-ink-100 rounded-2xl border border-ink-100 bg-white shadow-soft">
+            {visible.map(c => <CountryRow key={c.code} country={c} />)}
           </ul>
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={filtered?.length ?? 0}
+            onChange={setPage}
+          />
         </>
       )}
     </div>
   );
 };
 
-const CountryRow: React.FC<{ country: AdminCountry }> = ({ country }) => {
-  const [commission, setCommission] = useState((country.commissionPct * 100).toFixed(2));
-  const [overage, setOverage]       = useState(country.overageRatePerKm.toFixed(2));
-  const [currency, setCurrency]     = useState(country.currency);
-  const [active, setActive]         = useState(country.active);
-  const [busy, setBusy]   = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const onSave = async () => {
-    setBusy(true); setError(null); setSaved(false);
-    try {
-      await adminApi.updateCountry(country.code, {
-        commissionPct: Number(commission) / 100,
-        overageRatePerKm: Number(overage),
-        currency: currency.toUpperCase(),
-        active,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <li className="rounded-3xl border border-ink-100 bg-white p-5 shadow-soft">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Flag code={country.code} size="lg" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold tracking-tight">{country.name}</h2>
-              <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink-700">{country.code}</span>
-            </div>
-            <p className="mt-1 text-xs text-ink-500">Updated {new Date(country.updatedAt).toLocaleString()}</p>
-          </div>
+const CountryRow: React.FC<{ country: AdminCountry }> = ({ country }) => (
+  <li>
+    <Link
+      href={`/admin/settings/countries/${country.code}`}
+      className="grid grid-cols-1 items-center gap-2 px-4 py-3 transition hover:bg-ink-50/60 lg:grid-cols-[1fr_auto_auto_auto_auto_24px] lg:gap-4">
+      {/* Country */}
+      <div className="flex items-center gap-3">
+        <Flag code={country.code} size="md" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-ink-900">{country.name}</p>
+          <p className="text-[10px] font-mono uppercase text-ink-500">{country.code}</p>
         </div>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)}
-            className="h-4 w-4 rounded border-ink-300 text-brand-500" />
-          {active ? 'Active' : 'Disabled'}
-        </label>
       </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-        <Field label="Commission %">
-          <input type="number" step="0.01" min="0" max="100" value={commission} onChange={e => setCommission(e.target.value)}
-            className="w-full bg-transparent text-base outline-none" />
-        </Field>
-        <Field label={`Overage per km (${currency || country.currency})`}>
-          <input type="number" step="0.01" min="0" value={overage} onChange={e => setOverage(e.target.value)}
-            className="w-full bg-transparent text-base outline-none" />
-        </Field>
-        <Field label="Currency (ISO-3)">
-          <input maxLength={3} value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())}
-            className="w-full bg-transparent text-base outline-none uppercase" />
-        </Field>
-        <button onClick={onSave} disabled={busy} className="btn-primary !py-2.5 !px-4 !text-sm">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {busy ? 'Saving…' : 'Save'}
-        </button>
-      </div>
-
-      {error ? (
-        <div className="mt-3 inline-flex w-full items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" /> {error}
-        </div>
-      ) : null}
-
-      {saved ? (
-        <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-emerald-700">
-          <CheckCircle2 className="h-3.5 w-3.5" /> Saved
-        </div>
-      ) : null}
-    </li>
-  );
-};
-
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label className="block rounded-2xl border border-ink-200 bg-white px-3 py-2 focus-within:border-brand-500">
-    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">{label}</span>
-    <div className="mt-1">{children}</div>
-  </label>
+      <span className="w-20 text-right text-sm font-bold text-ink-900">
+        {(country.commissionPct * 100).toFixed(1)}<span className="ml-0.5 text-xs text-ink-500">%</span>
+      </span>
+      <span className="w-24 text-right text-sm font-bold text-ink-900">
+        {country.overageRatePerKm.toFixed(2)}<span className="ml-0.5 text-xs text-ink-500">{country.currency}</span>
+      </span>
+      <span className="w-16 text-right text-xs font-mono font-semibold text-ink-700">{country.currency}</span>
+      <span className="inline-flex w-20 items-center justify-end gap-1 text-xs font-semibold">
+        {country.active ? (
+          <>
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-emerald-700">Active</span>
+          </>
+        ) : (
+          <>
+            <PauseCircle className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-amber-700">Disabled</span>
+          </>
+        )}
+      </span>
+      <ChevronRight className="hidden h-4 w-4 text-ink-400 lg:block" />
+    </Link>
+  </li>
 );
