@@ -146,7 +146,8 @@ export const api = {
   featuredDestinations: (limit = 9) =>
     request<{ destinations: FeaturedDestination[] }>(
       `/v1/destinations/featured?limit=${limit}`,
-      { next: { revalidate: 600 } },
+      // 60s ISR so admin toggles surface fast without hammering API.
+      { next: { revalidate: 60 } },
     ),
 
   applyPromoCode: (input: { code: string; subtotal: number; currency: string }) =>
