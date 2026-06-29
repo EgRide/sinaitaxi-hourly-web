@@ -303,32 +303,35 @@ const SupplierEditor: React.FC<{ supplier: AdminSupplier; onSaved: () => void }>
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex items-start gap-3 rounded-2xl border border-ink-100 bg-white px-4 py-3 cursor-pointer hover:border-ink-200 transition">
-          <input
-            type="checkbox"
-            checked={hourlyActive}
-            onChange={e => setHourlyActive(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-ink-300 text-brand-600"
-          />
-          <span className="text-sm">
-            <span className="font-semibold text-ink-800">Active in hourly marketplace</span>
-            <span className="mt-0.5 block text-xs text-ink-500">
-              When unticked, this supplier's offers stop showing in /search and no new bookings can be made.
-              The supplier stays untouched on the main PHP system.
-            </span>
+      {/* Active toggle — full width, clearly its own control. */}
+      <label className="flex items-start gap-3 rounded-2xl border border-ink-100 bg-white px-4 py-3 cursor-pointer hover:border-ink-200 transition">
+        <input
+          type="checkbox"
+          checked={hourlyActive}
+          onChange={e => setHourlyActive(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-ink-300 text-brand-600"
+        />
+        <span className="text-sm">
+          <span className="font-semibold text-ink-800">Active in hourly marketplace</span>
+          <span className="mt-0.5 block text-xs text-ink-500">
+            When unticked, this supplier's offers stop showing in /search and no new bookings
+            can be made. The supplier stays untouched on the main PHP system.
           </span>
-        </label>
-        <Field label="Commission % override (empty = use country default)">
-          <input
-            type="number" step="0.01" min="0" max="100"
-            value={commissionInput}
-            onChange={e => setCommissionInput(e.target.value)}
-            placeholder="e.g. 15"
-            className="w-full bg-transparent text-base outline-none"
-          />
-        </Field>
-      </div>
+        </span>
+      </label>
+
+      {/* Commission override — same Field style as Country settings:
+          standalone row with the label tied to the input. Leave empty
+          to fall back to the country-level commission. */}
+      <Field label="Commission % override">
+        <input
+          type="number" step="0.01" min="0" max="100"
+          value={commissionInput}
+          onChange={e => setCommissionInput(e.target.value)}
+          placeholder="Leave empty to use the country default"
+          className="w-full bg-transparent text-base outline-none"
+        />
+      </Field>
 
       <Field label="Internal notes (admin only)">
         <textarea
