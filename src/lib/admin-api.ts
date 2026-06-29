@@ -247,6 +247,12 @@ export const adminApi = {
       { method: 'POST' },
     ),
 
+  autoFeatureDestinations: (limit?: number) =>
+    request<{ ok: true; picked: number; cleared: number; slugs: string[] }>(
+      `/v1/admin/destinations/auto-feature${limit ? `?limit=${limit}` : ''}`,
+      { method: 'POST' },
+    ),
+
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
 };

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Plus, AlertCircle, MapPin, ExternalLink, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, MapPin, ExternalLink, Sparkles, Wand2, Star } from 'lucide-react';
 import { adminApi, type AdminDestinationContent } from '@/lib/admin-api';
 import { AdminShell } from '../AdminShell';
 
@@ -27,6 +27,8 @@ const DestinationsList: React.FC = () => {
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
+  const [featuring, setFeaturing] = useState(false);
+  const [featureMsg, setFeatureMsg] = useState<string | null>(null);
   const [coverage, setCoverage] = useState<{ polygons: number; withContent: number; gap: number } | null>(null);
 
   const reload = () => {
@@ -40,6 +42,21 @@ const DestinationsList: React.FC = () => {
   };
 
   useEffect(() => { void reload(); }, []);
+
+  const onAutoFeature = async () => {
+    setFeaturing(true);
+    setError(null);
+    setFeatureMsg(null);
+    try {
+      const r = await adminApi.autoFeatureDestinations();
+      setFeatureMsg(`Homepage strip rebuilt — ${r.picked} featured (${r.slugs.join(', ')}). Cleared ${r.cleared} stale flags.`);
+      await reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setFeaturing(false);
+    }
+  };
 
   const onGenerate = async () => {
     if (!confirm('Generate AI content for up to the next batch of polygons that don’t have content yet? Output is published immediately.')) return;
@@ -93,6 +110,14 @@ const DestinationsList: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={onAutoFeature}
+            disabled={featuring}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-50">
+            {featuring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+            Re-pick homepage
+          </button>
+          <button
+            type="button"
             onClick={onSeed}
             disabled={seeding}
             className="inline-flex items-center gap-2 rounded-xl bg-ink-100 px-4 py-2 text-sm font-bold text-ink-800 hover:bg-ink-200 disabled:opacity-50">
@@ -124,6 +149,12 @@ const DestinationsList: React.FC = () => {
         <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
           <Wand2 className="h-4 w-4 mt-0.5" />
           {genMsg}
+        </div>
+      ) : null}
+      {featureMsg ? (
+        <div className="inline-flex w-full items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Star className="h-4 w-4 mt-0.5" />
+          {featureMsg}
         </div>
       ) : null}
 
