@@ -255,7 +255,44 @@ export const adminApi = {
 
   csvDownloadUrl: (filters: AdminBookingsFilters = {}): string =>
     `${BASE}/v1/admin/bookings${buildQuery({ ...filters, format: 'csv' })}`,
+
+  suppliers: () =>
+    request<{ suppliers: AdminSupplier[] }>('/v1/admin/suppliers'),
+
+  updateSupplier: (phpId: string, patch: Partial<AdminSupplierPatch>) =>
+    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
 };
+
+export interface AdminSupplier {
+  partnerPhpId: string;
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  province: string | null;
+  phpActive: boolean;                  // PHP-side active flag (read-only here)
+  approvedAt: string | null;
+  hourlyActive: boolean;               // our override
+  commissionPctOverride: number | null;
+  notes: string | null;
+  overrideUpdatedAt: string | null;
+  // insights
+  bookingsCount: number;
+  revenue: number;
+  wholesale: number;
+  lastBookingAt: string | null;
+}
+
+export interface AdminSupplierPatch {
+  hourlyActive: boolean;
+  commissionPctOverride: number | null;
+  notes: string | null;
+}
 
 export interface AdminPromoCode {
   id: string;
