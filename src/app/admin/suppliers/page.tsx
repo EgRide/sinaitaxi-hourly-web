@@ -11,8 +11,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Loader2, AlertCircle, Search, Users, Pencil, X, Save, CheckCircle2,
   Activity, DollarSign, TrendingUp, EyeOff, Building2, Phone, Mail, MessageCircle,
+  Plus, Trash2,
 } from 'lucide-react';
-import { adminApi, type AdminSupplier } from '@/lib/admin-api';
+import { adminApi, type AdminSupplier, type AdminSupplierExtra } from '@/lib/admin-api';
 import { Pagination } from '@/components/Pagination';
 import { AdminShell } from '../AdminShell';
 
@@ -377,7 +378,271 @@ const SupplierEditor: React.FC<{ supplier: AdminSupplier; onSaved: () => void }>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         Save changes
       </button>
+
+      {/* Booking extras — hourly-only add-ons + read-only view of
+          PHP child seats so the admin can see both surfaces. */}
+      <SupplierExtrasPanel partnerPhpId={supplier.partnerPhpId} />
     </form>
+  );
+};
+
+const SupplierExtrasPanel: React.FC<{ partnerPhpId: string }> = ({ partnerPhpId }) => {
+  const [data, setData] = useState<{
+    customExtras: AdminSupplierExtra[];
+    childSeats: { id: string; name: string; price: number; currency: string; active: boolean }[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  // Draft for the inline "Add extra" form.
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newPrice, setNewPrice] = useState('5.00');
+  const [newCurrency, setNewCurrency] = useState('EUR');
+  const [creating, setCreating] = useState(false);
+
+  const reload = () => {
+    setLoading(true);
+    return adminApi.supplierExtras(partnerPhpId)
+      .then(r => { setData(r); setError(null); })
+      .catch(err => setError((err as Error).message))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { void reload(); }, [partnerPhpId]);
+
+  const onCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      await adminApi.createSupplierExtra(partnerPhpId, {
+        name: newName.trim(),
+        description: newDesc.trim() || null,
+        price: Number(newPrice) || 0,
+        currency: newCurrency.toUpperCase(),
+      });
+      setNewName(''); setNewDesc(''); setNewPrice('5.00');
+      setAdding(false);
+      await reload();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-2xl border border-ink-100 bg-ink-50/40 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h4 className="text-sm font-bold text-ink-900">Booking extras</h4>
+          <p className="text-[11px] text-ink-500">
+            Hourly-only add-ons are managed here. Child seats below are read-only and come live from the
+            main Sinai Taxi system.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdding(a => !a)}
+          className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700">
+          {adding ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+          {adding ? 'Cancel' : 'Add extra'}
+        </button>
+      </div>
+
+      {error ? (
+        <div className="mt-3 inline-flex w-full items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5" /> {error}
+        </div>
+      ) : null}
+
+      {/* Add form */}
+      {adding ? (
+        <form onSubmit={onCreate} className="mt-3 grid gap-2 rounded-xl border border-ink-200 bg-white p-3 sm:grid-cols-[2fr_1fr_80px_auto]">
+          <input
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="Extra name (e.g. In-car WiFi)"
+            className="rounded-lg border border-ink-200 px-3 py-1.5 text-sm outline-none focus:border-brand-500"
+            required
+          />
+          <input
+            value={newDesc}
+            onChange={e => setNewDesc(e.target.value)}
+            placeholder="Short description (optional)"
+            className="rounded-lg border border-ink-200 px-3 py-1.5 text-sm outline-none focus:border-brand-500"
+          />
+          <input
+            type="number" step="0.01" min={0}
+            value={newPrice}
+            onChange={e => setNewPrice(e.target.value)}
+            className="rounded-lg border border-ink-200 px-3 py-1.5 text-sm outline-none focus:border-brand-500"
+            required
+          />
+          <div className="flex gap-1.5">
+            <input
+              value={newCurrency}
+              onChange={e => setNewCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              placeholder="EUR"
+              className="w-16 rounded-lg border border-ink-200 px-2 py-1.5 text-sm uppercase outline-none focus:border-brand-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={creating}
+              className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700 disabled:opacity-50">
+              {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {/* Custom extras list */}
+      <div className="mt-3 space-y-2">
+        <h5 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Custom (hourly-only)</h5>
+        {loading ? (
+          <p className="inline-flex items-center gap-2 text-xs text-ink-500">
+            <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+          </p>
+        ) : !data || data.customExtras.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-ink-200 px-3 py-3 text-xs text-ink-500">
+            No custom extras yet. Use “Add extra” above to publish one (WiFi, water, etc.).
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.customExtras.map(ex => (
+              <ExtraRow key={ex.id} partnerPhpId={partnerPhpId} extra={ex} onChanged={reload} />
+            ))}
+          </ul>
+        )}
+
+        {/* Child seats — read-only */}
+        <h5 className="mt-4 text-[10px] font-bold uppercase tracking-wider text-ink-500">Child seats (from PHP)</h5>
+        {loading ? null : !data || data.childSeats.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-ink-200 px-3 py-3 text-xs text-ink-500">
+            No child seats attached on the PHP side, or PHP didn't return them.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.childSeats.map(s => (
+              <li key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-100 bg-white px-3 py-2 text-xs">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-ink-900">{s.name}</p>
+                  <p className="text-[10px] text-ink-500">
+                    PHP id #{s.id}{s.active ? '' : ' · inactive'}
+                  </p>
+                </div>
+                <span className="font-mono text-xs font-bold text-ink-900">
+                  {s.price.toFixed(2)} {s.currency}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+};
+
+const ExtraRow: React.FC<{
+  partnerPhpId: string;
+  extra: AdminSupplierExtra;
+  onChanged: () => void;
+}> = ({ partnerPhpId, extra, onChanged }) => {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(extra.name);
+  const [desc, setDesc] = useState(extra.description ?? '');
+  const [price, setPrice] = useState(extra.price.toFixed(2));
+  const [currency, setCurrency] = useState(extra.currency);
+  const [active, setActive] = useState(extra.active);
+  const [busy, setBusy] = useState(false);
+
+  const onSave = async () => {
+    setBusy(true);
+    try {
+      await adminApi.updateSupplierExtra(partnerPhpId, extra.id, {
+        name: name.trim(),
+        description: desc.trim() || null,
+        price: Number(price) || 0,
+        currency: currency.toUpperCase(),
+        active,
+      });
+      setEditing(false);
+      onChanged();
+    } catch { /* surfaced upstream */ }
+    finally { setBusy(false); }
+  };
+
+  const onDelete = async () => {
+    if (!confirm(`Delete "${extra.name}"? Customers won't see it on new bookings.`)) return;
+    setBusy(true);
+    try {
+      await adminApi.deleteSupplierExtra(partnerPhpId, extra.id);
+      onChanged();
+    } catch { /* surfaced upstream */ }
+    finally { setBusy(false); }
+  };
+
+  if (editing) {
+    return (
+      <li className="rounded-lg border border-brand-200 bg-white p-2 text-xs">
+        <div className="grid gap-1.5 sm:grid-cols-[2fr_1fr_70px_60px_auto]">
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name"
+            className="rounded border border-ink-200 px-2 py-1 outline-none focus:border-brand-500" />
+          <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Description"
+            className="rounded border border-ink-200 px-2 py-1 outline-none focus:border-brand-500" />
+          <input type="number" step="0.01" min={0} value={price} onChange={e => setPrice(e.target.value)}
+            className="rounded border border-ink-200 px-2 py-1 outline-none focus:border-brand-500" />
+          <input value={currency} onChange={e => setCurrency(e.target.value.toUpperCase())} maxLength={3}
+            className="rounded border border-ink-200 px-2 py-1 uppercase outline-none focus:border-brand-500" />
+          <div className="flex items-center gap-1">
+            <label className="inline-flex items-center gap-1 text-[10px]">
+              <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)}
+                className="h-3 w-3 rounded border-ink-300" />
+              Active
+            </label>
+            <button type="button" onClick={onSave} disabled={busy}
+              className="inline-flex items-center gap-1 rounded bg-brand-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-brand-700 disabled:opacity-50">
+              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Save
+            </button>
+            <button type="button" onClick={() => setEditing(false)}
+              className="inline-flex items-center rounded bg-ink-100 px-2 py-1 text-[10px] font-bold text-ink-700 hover:bg-ink-200">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className={`flex items-center justify-between gap-3 rounded-lg border ${extra.active ? 'border-ink-100' : 'border-amber-200 bg-amber-50/40'} bg-white px-3 py-2 text-xs`}>
+      <div className="min-w-0">
+        <p className="truncate font-bold text-ink-900">
+          {extra.name}
+          {!extra.active ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700">Paused</span> : null}
+        </p>
+        {extra.description ? <p className="truncate text-[10px] text-ink-500">{extra.description}</p> : null}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-xs font-bold text-ink-900">
+          {extra.price.toFixed(2)} {extra.currency}
+        </span>
+        <button type="button" onClick={() => setEditing(true)} disabled={busy}
+          className="rounded-lg bg-ink-50 px-2 py-1 text-[10px] font-bold text-ink-700 hover:bg-ink-100 disabled:opacity-50">
+          Edit
+        </button>
+        <button type="button" onClick={onDelete} disabled={busy}
+          className="rounded-lg bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-50">
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+    </li>
   );
 };
 

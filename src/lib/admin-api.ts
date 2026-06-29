@@ -316,6 +316,28 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
+
+  supplierExtras: (phpId: string) =>
+    request<{ customExtras: AdminSupplierExtra[]; childSeats: { id: string; name: string; price: number; currency: string; active: boolean }[] }>(
+      `/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras`,
+    ),
+
+  createSupplierExtra: (phpId: string, input: AdminSupplierExtraInput) =>
+    request<{ ok: true; id: string }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateSupplierExtra: (phpId: string, id: string, patch: Partial<AdminSupplierExtraInput>) =>
+    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  deleteSupplierExtra: (phpId: string, id: string) =>
+    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
 };
 
 export interface AdminSupplier {
@@ -338,6 +360,26 @@ export interface AdminSupplier {
   revenue: number;
   wholesale: number;
   lastBookingAt: string | null;
+}
+
+export interface AdminSupplierExtra {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  currency: string;
+  active: boolean;
+  sortOrder: number;
+  updatedAt: string;
+}
+
+export interface AdminSupplierExtraInput {
+  name: string;
+  description?: string | null;
+  price: number;
+  currency: string;
+  active?: boolean;
+  sortOrder?: number;
 }
 
 export interface AdminSupplierPatch {

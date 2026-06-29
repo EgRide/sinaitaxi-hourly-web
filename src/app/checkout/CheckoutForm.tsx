@@ -11,13 +11,13 @@
 // price from /v1/checkout's response, never from a client-side
 // calculation, so any rule edits in flight are honoured.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { ArrowRight, Lock, ShieldCheck, AlertCircle, Tag, X, CheckCircle2 } from 'lucide-react';
-import { api, type CheckoutInput, type OfferCard } from '@/lib/api';
+import { ArrowRight, Lock, ShieldCheck, AlertCircle, Tag, X, CheckCircle2, Plus, Minus, Sparkles } from 'lucide-react';
+import { api, type CheckoutInput, type OfferCard, type CheckoutChildSeat, type CheckoutCustomExtra } from '@/lib/api';
 
 type StripePromise = Promise<Stripe | null> | null;
 let _stripe: StripePromise = null;
@@ -79,8 +79,44 @@ export const CheckoutForm: React.FC<Props> = (props) => {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ code: string; discount: number } | null>(null);
 
+  // Booking extras (child seats from PHP + admin-managed custom
+  // add-ons). Fetched once per offer; the quantity / selected
+  // state lives client-side, the total is recomputed live.
+  const [extrasCatalog, setExtrasCatalog] = useState<{
+    childSeats: CheckoutChildSeat[];
+    customExtras: CheckoutCustomExtra[];
+  } | null>(null);
+  const [extraQty, setExtraQty] = useState<Record<string, number>>({});
+  useEffect(() => {
+    void api.extras(props.offer.partnerPhpId)
+      .then(r => setExtrasCatalog(r))
+      .catch(() => setExtrasCatalog({ childSeats: [], customExtras: [] }));
+  }, [props.offer.partnerPhpId]);
+
+  const setQty = (key: string, n: number) =>
+    setExtraQty(m => ({ ...m, [key]: Math.max(0, Math.min(3, n)) }));
+
+  const selectedExtras = useMemo(() => {
+    const out: { type: 'child_seat' | 'custom'; id: string; quantity: number; name: string; unitPrice: number }[] = [];
+    if (!extrasCatalog) return out;
+    for (const s of extrasCatalog.childSeats) {
+      const q = extraQty[`child:${s.id}`] ?? 0;
+      if (q > 0) out.push({ type: 'child_seat', id: s.id, quantity: q, name: s.name, unitPrice: s.price });
+    }
+    for (const e of extrasCatalog.customExtras) {
+      const q = extraQty[`custom:${e.id}`] ?? 0;
+      if (q > 0) out.push({ type: 'custom', id: e.id, quantity: q, name: e.name, unitPrice: e.price });
+    }
+    return out;
+  }, [extrasCatalog, extraQty]);
+
+  const extrasTotal = useMemo(
+    () => Math.round(selectedExtras.reduce((s, e) => s + e.unitPrice * e.quantity, 0) * 100) / 100,
+    [selectedExtras],
+  );
+
   const subtotal = props.offer.totalPrice;
-  const total = Math.max(0, Math.round((subtotal - (promo?.discount ?? 0)) * 100) / 100);
+  const total = Math.max(0, Math.round((subtotal - (promo?.discount ?? 0) + extrasTotal) * 100) / 100);
 
   const onApplyPromo = async () => {
     const code = promoInput.trim();
@@ -144,6 +180,9 @@ export const CheckoutForm: React.FC<Props> = (props) => {
         customerComments: comments.trim() || null,
         hotelRoomNumber: hotelRoom.trim() || null,
         promoCode: promo?.code ?? null,
+        extras: selectedExtras.length
+          ? selectedExtras.map(e => ({ type: e.type, id: e.id, quantity: e.quantity }))
+          : null,
         agreedToTerms: true,
       };
       const res = await api.checkout(input);
@@ -260,6 +299,70 @@ export const CheckoutForm: React.FC<Props> = (props) => {
           className="w-full resize-none bg-transparent text-base outline-none"
         />
       </Field>
+
+      {/* Booking extras (child seats + custom add-ons) */}
+      {extrasCatalog && (extrasCatalog.childSeats.length + extrasCatalog.customExtras.length > 0) ? (
+        <section className="rounded-2xl border border-ink-200 bg-white p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-700">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <h3 className="text-sm font-bold text-ink-900">Add-ons</h3>
+          </div>
+
+          {extrasCatalog.childSeats.length > 0 ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Child seats</p>
+              <ul className="mt-2 space-y-2">
+                {extrasCatalog.childSeats.map(s => {
+                  const key = `child:${s.id}`;
+                  const q = extraQty[key] ?? 0;
+                  return (
+                    <ExtraRowControl
+                      key={key}
+                      title={s.name}
+                      subtitle={`${formatPrice(s.price, s.currency)} each`}
+                      quantity={q}
+                      onChange={n => setQty(key, n)}
+                    />
+                  );
+                })}
+              </ul>
+            </>
+          ) : null}
+
+          {extrasCatalog.customExtras.length > 0 ? (
+            <>
+              <p className={`${extrasCatalog.childSeats.length > 0 ? 'mt-4' : ''} text-[10px] font-bold uppercase tracking-wider text-ink-500`}>
+                Other add-ons
+              </p>
+              <ul className="mt-2 space-y-2">
+                {extrasCatalog.customExtras.map(e => {
+                  const key = `custom:${e.id}`;
+                  const q = extraQty[key] ?? 0;
+                  return (
+                    <ExtraRowControl
+                      key={key}
+                      title={e.name}
+                      subtitle={e.description ?? `${formatPrice(e.price, e.currency)} per booking`}
+                      quantity={q}
+                      onChange={n => setQty(key, n)}
+                      mode="toggle"
+                    />
+                  );
+                })}
+              </ul>
+            </>
+          ) : null}
+
+          {selectedExtras.length > 0 ? (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Add-ons total · {formatPrice(extrasTotal, props.offer.currency)}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Promo code */}
       {promo ? (
@@ -382,6 +485,55 @@ const PayStep: React.FC<{ bookingId: string; totalLabel: string }> = ({ bookingI
         {submitting ? 'Processing…' : `Pay ${totalLabel}`}
       </button>
     </form>
+  );
+};
+
+// Single add-on row. `mode='counter'` shows a +/− stepper (used
+// for child seats where quantity matters); `mode='toggle'` shows
+// a check pill (WiFi / water / etc. are typically yes-no).
+const ExtraRowControl: React.FC<{
+  title: string;
+  subtitle?: string;
+  quantity: number;
+  onChange: (n: number) => void;
+  mode?: 'counter' | 'toggle';
+}> = ({ title, subtitle, quantity, onChange, mode = 'counter' }) => {
+  const active = quantity > 0;
+  return (
+    <li className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition ${active ? 'border-brand-300 bg-brand-50/50' : 'border-ink-100 bg-white'}`}>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold text-ink-900">{title}</p>
+        {subtitle ? <p className="truncate text-[11px] text-ink-500">{subtitle}</p> : null}
+      </div>
+      {mode === 'toggle' ? (
+        <button
+          type="button"
+          onClick={() => onChange(active ? 0 : 1)}
+          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${active ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-ink-100 text-ink-700 hover:bg-ink-200'}`}>
+          {active ? (<><CheckCircle2 className="h-3.5 w-3.5" /> Added</>) : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+        </button>
+      ) : (
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white p-1 ring-1 ring-ink-200">
+          <button
+            type="button"
+            onClick={() => onChange(quantity - 1)}
+            disabled={quantity === 0}
+            aria-label="Decrease"
+            className="grid h-7 w-7 place-items-center rounded-full bg-ink-100 text-ink-700 hover:bg-ink-200 disabled:cursor-not-allowed disabled:opacity-40">
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <span className="w-6 text-center text-sm font-bold tabular-nums">{quantity}</span>
+          <button
+            type="button"
+            onClick={() => onChange(quantity + 1)}
+            disabled={quantity >= 3}
+            aria-label="Increase"
+            className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40">
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </li>
   );
 };
 

@@ -150,6 +150,11 @@ export const api = {
       { next: { revalidate: 60 } },
     ),
 
+  extras: (partnerPhpId: string) =>
+    request<{ childSeats: CheckoutChildSeat[]; customExtras: CheckoutCustomExtra[] }>(
+      `/v1/extras?partnerPhpId=${encodeURIComponent(partnerPhpId)}`,
+    ),
+
   applyPromoCode: (input: { code: string; subtotal: number; currency: string }) =>
     request<
       | { ok: true; code: string; discount: number; reason: 'percent' | 'amount' }
@@ -194,7 +199,19 @@ export interface CheckoutInput {
   customerComments?: string | null;
   hotelRoomNumber?: string | null;
   promoCode?: string | null;
+  extras?: { type: 'child_seat' | 'custom'; id: string; quantity: number }[] | null;
   agreedToTerms: true;
+}
+
+export interface CheckoutChildSeat { id: string; name: string; price: number; currency: string; }
+export interface CheckoutCustomExtra { id: string; name: string; description: string | null; price: number; currency: string; }
+export interface BookingExtraLine {
+  type: 'child_seat' | 'custom';
+  sourceId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
 }
 
 export interface CheckoutResult {
@@ -237,6 +254,8 @@ export interface BookingDetail {
   retailPrice: number;
   promoCode: string | null;
   promoDiscount: number | null;
+  extras: BookingExtraLine[];
+  extrasTotal: number;
   currency: string;
   createdAt: string;
   confirmedAt: string | null;
