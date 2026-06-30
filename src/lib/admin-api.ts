@@ -317,26 +317,38 @@ export const adminApi = {
       body: JSON.stringify(patch),
     }),
 
-  supplierExtras: (phpId: string) =>
-    request<{ customExtras: AdminSupplierExtra[]; childSeats: AdminSupplierExtra[] }>(
-      `/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras`,
-    ),
+  // ── Booking-extras catalogue (master "our data") ──────────
+  catalogExtras: () =>
+    request<{ items: CatalogExtra[] }>('/v1/admin/catalog-extras'),
 
-  createSupplierExtra: (phpId: string, input: AdminSupplierExtraInput) =>
-    request<{ ok: true; id: string }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras`, {
+  createCatalogExtra: (input: CatalogExtraInput) =>
+    request<{ ok: true; id: string }>('/v1/admin/catalog-extras', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
 
-  updateSupplierExtra: (phpId: string, id: string, patch: Partial<AdminSupplierExtraInput>) =>
-    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras/${encodeURIComponent(id)}`, {
+  updateCatalogExtra: (id: string, patch: Partial<CatalogExtraInput>) =>
+    request<{ ok: true }>(`/v1/admin/catalog-extras/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
 
-  deleteSupplierExtra: (phpId: string, id: string) =>
-    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/extras/${encodeURIComponent(id)}`, {
+  deleteCatalogExtra: (id: string) =>
+    request<{ ok: true }>(`/v1/admin/catalog-extras/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+    }),
+
+  // ── Per-provider assignment of catalogue items ────────────
+  supplierCatalog: (phpId: string) =>
+    request<{ items: SupplierCatalogRow[] }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/catalog`),
+
+  saveSupplierCatalog: (
+    phpId: string,
+    items: { catalogExtraId: string; assigned: boolean; price: number }[],
+  ) =>
+    request<{ ok: true }>(`/v1/admin/suppliers/${encodeURIComponent(phpId)}/catalog`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
     }),
 };
 
@@ -362,26 +374,40 @@ export interface AdminSupplier {
   lastBookingAt: string | null;
 }
 
-export interface AdminSupplierExtra {
+// Master catalogue item — "our data", shared across all providers.
+export interface CatalogExtra {
   id: string;
   name: string;
   description: string | null;
-  price: number;
-  currency: string;
   kind: 'general' | 'child_seat';
+  defaultPrice: number;
+  currency: string;
   active: boolean;
   sortOrder: number;
   updatedAt: string;
 }
 
-export interface AdminSupplierExtraInput {
+export interface CatalogExtraInput {
   name: string;
   description?: string | null;
-  price: number;
+  kind: 'general' | 'child_seat';
+  defaultPrice: number;
   currency: string;
-  kind?: 'general' | 'child_seat';
   active?: boolean;
   sortOrder?: number;
+}
+
+// A catalogue item as seen for one provider: whether they offer it +
+// the price to charge (their saved override, or the catalogue default).
+export interface SupplierCatalogRow {
+  catalogExtraId: string;
+  name: string;
+  description: string | null;
+  kind: 'general' | 'child_seat';
+  defaultPrice: number;
+  currency: string;
+  assigned: boolean;
+  price: number;
 }
 
 export interface AdminSupplierPatch {
