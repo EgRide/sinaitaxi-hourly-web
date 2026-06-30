@@ -289,6 +289,7 @@ export interface OfferCard {
   marginHours: number;
   minHours: number;
   maxHours: number;
+  partnerCount: number;
 }
 
 export interface OffersResult {
