@@ -7,7 +7,8 @@ import { HowItWorks } from '@/components/sections/HowItWorks';
 import { VehicleClasses } from '@/components/sections/VehicleClasses';
 import { FeaturedDestinations } from '@/components/sections/FeaturedDestinations';
 import { WhyHourly } from '@/components/sections/WhyHourly';
-import { Testimonials } from '@/components/sections/Testimonials';
+import { ExamplePrice } from '@/components/sections/ExamplePrice';
+import { Vetting } from '@/components/sections/Vetting';
 import { Faq } from '@/components/sections/Faq';
 import { CtaBanner } from '@/components/sections/CtaBanner';
 
@@ -23,7 +24,8 @@ export default function Home() {
         <VehicleClasses />
         <FeaturedDestinations />
         <WhyHourly />
-        <Testimonials />
+        <ExamplePrice />
+        <Vetting />
         <Faq />
         <CtaBanner />
       </main>

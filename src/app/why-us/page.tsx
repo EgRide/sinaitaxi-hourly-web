@@ -6,7 +6,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { WhyHourly } from '@/components/sections/WhyHourly';
-import { Testimonials } from '@/components/sections/Testimonials';
+import { Vetting } from '@/components/sections/Vetting';
 
 export const metadata: Metadata = {
   title: 'Why Sinai Taxi Hourly — Chauffeur marketplace, transparently priced',
@@ -116,7 +116,7 @@ export default function WhyUsPage() {
           </p>
         </section>
 
-        <Testimonials />
+        <Vetting />
 
         {/* CTA */}
         <section className="mx-auto max-w-6xl px-6 pb-24 lg:pb-32">
