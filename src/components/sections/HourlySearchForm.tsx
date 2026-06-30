@@ -162,6 +162,7 @@ export const HourlySearchForm: React.FC = () => {
         countryCode: place.countryCode,
         locality: place.locality,
         sublocality: place.sublocality,
+        administrativeArea: place.administrativeArea,
         lat: place.lat,
         lng: place.lng,
         address: place.formattedAddress,

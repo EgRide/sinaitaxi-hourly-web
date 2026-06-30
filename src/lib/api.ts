@@ -71,6 +71,7 @@ export interface ResolveAddressInput {
   countryCode: string;
   locality?: string | null;
   sublocality?: string | null;
+  administrativeArea?: string | null;
   lat?: number;
   lng?: number;
   address?: string;
