@@ -38,8 +38,8 @@ const SECTIONS: PolicySection[] = [
         <p>
           By creating a booking on the Marketplace, you confirm that you have read,
           understood, and agree to be bound by these Terms of Service together with
-          our <a href="/privacy" className="text-brand-600 hover:underline">Privacy Policy</a>{' '}
-          and <a href="/refunds" className="text-brand-600 hover:underline">Refund and Cancellation Policy</a>.
+          our <a href="/privacy" className="text-brand-300 hover:underline">Privacy Policy</a>{' '}
+          and <a href="/refunds" className="text-brand-300 hover:underline">Refund and Cancellation Policy</a>.
         </p>
         <p>
           You must be at least 18 years old and able to enter into a legally binding
@@ -95,7 +95,7 @@ const SECTIONS: PolicySection[] = [
       <>
         <p>
           Cancellation rules are detailed in the{' '}
-          <a href="/refunds" className="text-brand-600 hover:underline">Refund and Cancellation Policy</a>.
+          <a href="/refunds" className="text-brand-300 hover:underline">Refund and Cancellation Policy</a>.
           In summary: cancellations more than 24 hours before pickup are fully
           refunded; within 24 hours they are non-refundable. The same rule applies
           if you are more than <strong>60 minutes late</strong> to the pickup point
@@ -181,7 +181,7 @@ const SECTIONS: PolicySection[] = [
       <>
         <p>
           Questions about these Terms? Email{' '}
-          <a href="mailto:sales@sinaitaxi.com" className="text-brand-600 hover:underline">
+          <a href="mailto:sales@sinaitaxi.com" className="text-brand-300 hover:underline">
             sales@sinaitaxi.com
           </a>{' '}
           or use the WhatsApp button at the bottom of every page.

@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { Faq } from '@/components/sections/Faq';
+import { Reveal } from '@/components/Reveal';
 
 export const metadata: Metadata = {
   title: 'How it works — Hourly chauffeur in under a minute',
@@ -59,19 +60,26 @@ export default function HowItWorksPage() {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main className="bg-[#070912] text-white">
         {/* Hero */}
-        <section className="bg-brand-900 text-white">
+        <section className="relative isolate overflow-hidden bg-[#070912] text-white">
+          <div aria-hidden className="absolute inset-0 -z-10">
+            <div className="absolute -left-32 top-[-12%] h-[40rem] w-[40rem] rounded-full bg-brand-500/25 blur-[130px]" />
+            <div className="absolute right-[-14%] top-[4%] h-[38rem] w-[38rem] rounded-full bg-violet-600/25 blur-[130px]" />
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          </div>
           <div className="mx-auto max-w-6xl px-6 pt-24 pb-20 sm:pt-32 sm:pb-24 lg:pt-40">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">How it works</span>
-            <h1 className="mt-3 max-w-3xl text-5xl font-extrabold leading-[0.95] tracking-tightest sm:text-6xl md:text-7xl">
-              Four steps.<br />
-              <span className="text-white/60">No fine print.</span>
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-300">
-              We built the marketplace around what we wanted ourselves: fast, transparent,
-              and short on theatre. Here&rsquo;s the entire journey, top to bottom.
-            </p>
+            <Reveal>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">How it works</span>
+              <h1 className="mt-3 max-w-3xl text-5xl font-extrabold leading-[0.95] tracking-tightest sm:text-6xl md:text-7xl">
+                <span className="text-gradient">Four steps.</span><br />
+                <span className="text-white/55">No fine print.</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/65">
+                We built the marketplace around what we wanted ourselves: fast, transparent,
+                and short on theatre. Here&rsquo;s the entire journey, top to bottom.
+              </p>
+            </Reveal>
           </div>
         </section>
 
@@ -80,8 +88,8 @@ export default function HowItWorksPage() {
           <ol className="space-y-24">
             {STEPS.map((s, idx) => (
               <li key={s.n} className={`grid items-center gap-10 ${idx % 2 ? 'lg:grid-cols-[1.2fr_1fr]' : 'lg:grid-cols-[1fr_1.2fr]'}`}>
-                <div className={idx % 2 ? 'lg:order-2' : ''}>
-                  <div className="aspect-[5/4] min-h-[320px] overflow-hidden rounded-3xl bg-ink-100 shadow-soft">
+                <Reveal className={idx % 2 ? 'lg:order-2' : ''}>
+                  <div className="aspect-[5/4] min-h-[320px] overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://images.unsplash.com/${s.unsplash}?w=1400&q=70`}
@@ -90,16 +98,16 @@ export default function HowItWorksPage() {
                       className="h-full w-full object-cover"
                     />
                   </div>
-                </div>
-                <div className={idx % 2 ? 'lg:order-1' : ''}>
-                  <div className="flex items-center gap-3 text-brand-600">
-                    <span className="font-mono text-3xl font-extrabold tracking-tighter">{s.n}</span>
+                </Reveal>
+                <Reveal delay={120} className={idx % 2 ? 'lg:order-1' : ''}>
+                  <div className="flex items-center gap-3 text-brand-300">
+                    <span className="text-gradient font-mono text-3xl font-extrabold tracking-tighter">{s.n}</span>
                     <s.icon className="h-5 w-5" />
                   </div>
-                  <h2 className="mt-3 text-4xl font-extrabold tracking-tightest">{s.title}</h2>
-                  <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink-700">{s.body}</p>
-                  <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-500">{s.detail}</p>
-                </div>
+                  <h2 className="mt-3 text-4xl font-extrabold tracking-tightest text-white">{s.title}</h2>
+                  <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/70">{s.body}</p>
+                  <p className="mt-4 max-w-xl text-base leading-relaxed text-white/45">{s.detail}</p>
+                </Reveal>
               </li>
             ))}
           </ol>
@@ -108,18 +116,20 @@ export default function HowItWorksPage() {
         <Faq />
 
         <section className="mx-auto max-w-6xl px-6 py-24 text-center lg:py-32">
-          <h2 className="text-4xl font-extrabold tracking-tightest sm:text-5xl">
-            Ready to try it?
-          </h2>
-          <p className="mt-3 text-lg text-ink-600">
-            Start a search from the home page — takes under a minute.
-          </p>
-          <Link
-            href="/"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700">
-            Start your search
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <Reveal>
+            <h2 className="text-4xl font-extrabold tracking-tightest text-white sm:text-5xl">
+              Ready to <span className="text-gradient">try it?</span>
+            </h2>
+            <p className="mt-3 text-lg text-white/65">
+              Start a search from the home page — takes under a minute.
+            </p>
+            <Link
+              href="/"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90">
+              Start your search
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Reveal>
         </section>
       </main>
       <SiteFooter />

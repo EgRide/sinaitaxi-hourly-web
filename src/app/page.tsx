@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <>
       <SiteHeader />
-      <main>
+      <main className="bg-[#070912]">
         <Hero />
         <HeroSpacer />
         <TrustStrip />

@@ -81,15 +81,15 @@ export const OrderPoller: React.FC<Props> = ({ initial }) => {
 };
 
 const PollingView: React.FC<{ booking: BookingDetail; polling: boolean }> = ({ booking, polling }) => (
-  <div className="rounded-3xl border border-ink-100 bg-white p-8 text-center shadow-soft">
-    <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+  <div className="glass rounded-3xl p-8 text-center">
+    <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-white/5 text-brand-300">
       <RefreshCw className={cn('h-6 w-6', polling && 'animate-spin')} />
     </div>
-    <h2 className="mt-4 text-xl font-bold tracking-tight">Confirming your booking…</h2>
-    <p className="mt-2 text-sm text-ink-600">
+    <h2 className="mt-4 text-xl font-bold tracking-tight text-white">Confirming your booking…</h2>
+    <p className="mt-2 text-sm text-white/65">
       We just need a second to finalise the booking with Stripe. This page refreshes automatically.
     </p>
-    <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-ink-500">
+    <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-white/45">
       <Clock className="h-3.5 w-3.5" />
       Reference: {booking.id}
     </p>
@@ -102,12 +102,12 @@ const ResumePayView: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
     : undefined, [booking.stripeClientSecret]);
 
   return (
-    <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
-      <h2 className="text-xl font-bold tracking-tight">Finish your booking</h2>
-      <p className="mt-1 text-sm text-ink-600">
+    <div className="glass rounded-3xl p-6">
+      <h2 className="text-xl font-bold tracking-tight text-white">Finish your booking</h2>
+      <p className="mt-1 text-sm text-white/65">
         We saved your booking but didn't see a payment yet. Complete it below — same offer, same price.
       </p>
-      <div className="mt-5">
+      <div className="mt-5 rounded-2xl bg-white/95 p-4">
         <Elements stripe={stripePromise()} options={options}>
           <ResumePayInner bookingId={booking.id} total={formatPrice(booking.retailPrice, booking.currency)} />
         </Elements>
@@ -147,24 +147,24 @@ const ResumePayInner: React.FC<{ bookingId: string; total: string }> = ({ bookin
 
 const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
   <div className="space-y-6">
-    <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6">
+    <div className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-emerald-600">
+        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300">
           <CheckCircle2 className="h-6 w-6" />
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
             {booking.status === 'started' ? 'In progress' : booking.status === 'completed' || booking.status === 'settled' ? 'Trip complete' : 'Confirmed'}
           </div>
-          <div className="text-lg font-bold tracking-tight text-emerald-900">
+          <div className="text-lg font-bold tracking-tight text-white">
             {booking.status === 'started' ? 'Your trip is underway' : booking.status === 'completed' || booking.status === 'settled' ? 'Thanks for travelling' : 'Your driver is booked'}
           </div>
         </div>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-emerald-800">
+      <p className="mt-3 text-sm leading-relaxed text-emerald-100/80">
         {booking.driverName
           ? <>Driver contact details are below — you'll get an SMS too.</>
-          : <>We sent a confirmation email to <span className="font-medium">{booking.customerEmail}</span>. The driver's contact details will appear here when assigned.</>}
+          : <>We sent a confirmation email to <span className="font-medium text-white">{booking.customerEmail}</span>. The driver's contact details will appear here when assigned.</>}
       </p>
     </div>
 
@@ -174,19 +174,19 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
       <CancelPanel booking={booking} />
     ) : null}
 
-    <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
-      <div className="flex items-center gap-3 border-b border-ink-100 pb-4">
-        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-700">
+    <div className="glass rounded-3xl p-6">
+      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/5 text-brand-300">
           <Car className="h-5 w-5" />
         </div>
         <div>
-          <div className="text-lg font-bold">{booking.vehicleClass.label}</div>
-          <div className="text-xs text-ink-500">{booking.vehicleClass.description} · {booking.vehicleClass.seats}</div>
+          <div className="text-lg font-bold text-white">{booking.vehicleClass.label}</div>
+          <div className="text-xs text-white/45">{booking.vehicleClass.description} · {booking.vehicleClass.seats}</div>
         </div>
       </div>
       {booking.ruleName ? (
-        <p className="mt-3 text-xs text-ink-500">
-          Operated by <span className="font-medium text-ink-700">{booking.ruleName}</span>
+        <p className="mt-3 text-xs text-white/45">
+          Operated by <span className="font-medium text-white/70">{booking.ruleName}</span>
         </p>
       ) : null}
       <dl className="mt-4 space-y-3 text-sm">
@@ -200,11 +200,11 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
         } />
         <Row label="Included" value={<span className="inline-flex items-center gap-1.5"><Gauge className="h-3.5 w-3.5" />{booking.includedKm} km</span>} />
         <Row label="Reference" value={<span className="font-mono">{booking.id}</span>} />
-        <Row label="Total paid" value={<span className="font-bold text-brand-700">{formatPrice(booking.retailPrice, booking.currency)}</span>} />
+        <Row label="Total paid" value={<span className="font-bold text-brand-300">{formatPrice(booking.retailPrice, booking.currency)}</span>} />
       </dl>
       {booking.daySchedule && booking.daySchedule.length > 1 ? (
         <div className="mt-5">
-          <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-white/45">Per-day schedule</h3>
           <ul className="mt-2 space-y-1.5 text-xs">
             {booking.daySchedule.map((d, i) => {
               const dt = new Date(`${d.date}T${d.time}`);
@@ -213,9 +213,9 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
                 hour: 'numeric', minute: '2-digit',
               });
               return (
-                <li key={i} className="flex items-center justify-between gap-3 rounded-xl bg-ink-100 px-3 py-1.5 font-medium text-ink-800">
+                <li key={i} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 font-medium text-white/80">
                   <span>Day {i + 1} · {label}</span>
-                  <span className="font-bold">{d.hours}h</span>
+                  <span className="font-bold text-white">{d.hours}h</span>
                 </li>
               );
             })}
@@ -223,10 +223,10 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
         </div>
       ) : booking.hoursPerDay && booking.hoursPerDay.length > 1 ? (
         <div className="mt-5">
-          <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Per-day schedule</h3>
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-white/45">Per-day schedule</h3>
           <ul className="mt-2 flex flex-wrap gap-2 text-xs">
             {booking.hoursPerDay.map((h, i) => (
-              <li key={i} className="rounded-full bg-ink-100 px-3 py-1 font-medium text-ink-800">
+              <li key={i} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-white/80">
                 Day {i + 1} · {h}h
               </li>
             ))}
@@ -235,16 +235,16 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
       ) : null}
     </div>
 
-    <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-soft">
-      <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Good to know</h3>
-      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-ink-700">
+    <div className="glass rounded-3xl p-6">
+      <h3 className="text-[10px] font-bold uppercase tracking-wider text-white/45">Good to know</h3>
+      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-white/70">
         <li>• Free cancellation up to 24 hours before pickup. After that, non-refundable.</li>
         <li>• More than 60 minutes late at pickup = no-show, non-refundable.</li>
         <li>• Extra kilometres beyond {booking.includedKm} km are billed automatically after the trip.</li>
       </ul>
       <div className="mt-4 flex flex-wrap gap-3">
-        <Link href="/refund-policy" target="_blank" className="text-xs font-semibold text-brand-600 hover:text-brand-700">Refund policy →</Link>
-        <a href={`mailto:sales@sinaitaxi.com?subject=Booking%20${booking.id}`} className="text-xs font-semibold text-brand-600 hover:text-brand-700">Email support →</a>
+        <Link href="/refund-policy" target="_blank" className="text-xs font-semibold text-brand-300 hover:text-brand-200">Refund policy →</Link>
+        <a href={`mailto:sales@sinaitaxi.com?subject=Booking%20${booking.id}`} className="text-xs font-semibold text-brand-300 hover:text-brand-200">Email support →</a>
       </div>
     </div>
   </div>
@@ -258,13 +258,13 @@ const ClosedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
     ? 'This booking was refunded. Money should be back in your account within 2-10 business days.'
     : 'The driver waited at pickup for over 60 minutes — this booking is marked as a no-show and is non-refundable.';
   return (
-    <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+    <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-6 backdrop-blur-xl">
       <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
+        <AlertCircle className="mt-0.5 h-5 w-5 text-amber-300" />
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">{label}</div>
-          <div className="text-lg font-bold tracking-tight text-amber-900">Booking {label.toLowerCase()}</div>
-          <p className="mt-2 text-sm leading-relaxed text-amber-800">{explainer}</p>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300">{label}</div>
+          <div className="text-lg font-bold tracking-tight text-white">Booking {label.toLowerCase()}</div>
+          <p className="mt-2 text-sm leading-relaxed text-amber-100/80">{explainer}</p>
           <Link href="/" className="btn-primary mt-4">Start a new search</Link>
         </div>
       </div>
@@ -276,29 +276,29 @@ const Row: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value
   if (value === null || value === undefined || value === '') return null;
   return (
     <div className="flex items-start justify-between gap-3">
-      <dt className="text-[10px] font-bold uppercase tracking-wider text-ink-500">{label}</dt>
-      <dd className="text-right text-sm font-medium text-ink-800">{value}</dd>
+      <dt className="text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</dt>
+      <dd className="text-right text-sm font-medium text-white/80">{value}</dd>
     </div>
   );
 };
 
 const DriverCard: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
-  <div className="rounded-3xl border border-brand-200 bg-brand-50 p-5">
-    <div className="flex items-center gap-3 border-b border-brand-100 pb-3">
-      <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-brand-700">
+  <div className="rounded-3xl border border-brand-400/25 bg-brand-500/10 p-5 backdrop-blur-xl">
+    <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+      <div className="grid h-10 w-10 place-items-center rounded-2xl bg-brand-500/15 text-brand-300">
         <User className="h-5 w-5" />
       </div>
       <div>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Your driver</div>
-        <div className="text-lg font-bold text-brand-900">{booking.driverName}</div>
+        <div className="text-[10px] font-bold uppercase tracking-wider text-brand-300">Your driver</div>
+        <div className="text-lg font-bold text-white">{booking.driverName}</div>
       </div>
     </div>
     <dl className="mt-3 space-y-2 text-sm">
       <div className="flex items-start justify-between gap-3">
-        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Phone</dt>
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-300">Phone</dt>
         <dd className="text-right">
           {booking.driverPhone ? (
-            <a href={`tel:${booking.driverPhone}`} className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-900">
+            <a href={`tel:${booking.driverPhone}`} className="inline-flex items-center gap-1 font-bold text-brand-300 hover:text-white">
               <Phone className="h-3.5 w-3.5" />
               {booking.driverPhone}
             </a>
@@ -306,19 +306,19 @@ const DriverCard: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
         </dd>
       </div>
       <div className="flex items-start justify-between gap-3">
-        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Vehicle</dt>
-        <dd className="text-right text-sm font-medium text-brand-900">{booking.vehicleLabel ?? '—'}</dd>
+        <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-300">Vehicle</dt>
+        <dd className="text-right text-sm font-medium text-white">{booking.vehicleLabel ?? '—'}</dd>
       </div>
       {booking.kmDriven !== null ? (
-        <div className="flex items-start justify-between gap-3 border-t border-brand-100 pt-2">
-          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Km driven</dt>
-          <dd className="text-right text-sm font-medium text-brand-900">{booking.kmDriven} km</dd>
+        <div className="flex items-start justify-between gap-3 border-t border-white/10 pt-2">
+          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-300">Km driven</dt>
+          <dd className="text-right text-sm font-medium text-white">{booking.kmDriven} km</dd>
         </div>
       ) : null}
       {(booking.overageAmount ?? 0) > 0 ? (
         <div className="flex items-start justify-between gap-3">
-          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-700">Overage charged</dt>
-          <dd className="text-right text-sm font-bold text-brand-900">
+          <dt className="text-[10px] font-bold uppercase tracking-wider text-brand-300">Overage charged</dt>
+          <dd className="text-right text-sm font-bold text-white">
             {new Intl.NumberFormat('en', { style: 'currency', currency: booking.currency }).format(booking.overageAmount!)}
           </dd>
         </div>
@@ -334,16 +334,16 @@ const CancelPanel: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
 
   return (
     <>
-      <div className="rounded-3xl border border-ink-100 bg-white p-5 shadow-soft">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Need to cancel?</h3>
-        <p className="mt-2 text-sm text-ink-700">
+      <div className="glass rounded-3xl p-5">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-white/45">Need to cancel?</h3>
+        <p className="mt-2 text-sm text-white/70">
           {eligibleForRefund
-            ? <><strong>Free cancellation</strong> — you're more than 24 hours from pickup, so you'll get a full refund.</>
-            : <><strong>Non-refundable</strong> — pickup is in less than 24 hours. Cancelling now means you won't get your money back.</>}
+            ? <><strong className="text-white">Free cancellation</strong> — you're more than 24 hours from pickup, so you'll get a full refund.</>
+            : <><strong className="text-white">Non-refundable</strong> — pickup is in less than 24 hours. Cancelling now means you won't get your money back.</>}
         </p>
         <button
           onClick={() => setOpen(true)}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-2xl border border-ink-200 bg-white px-4 py-2 text-sm font-semibold text-ink-700 transition hover:border-red-200 hover:text-red-700">
+          className="mt-3 inline-flex items-center gap-1.5 rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-red-400/40 hover:text-red-300">
           Cancel booking
         </button>
       </div>
@@ -375,40 +375,40 @@ const CancelModal: React.FC<{ booking: BookingDetail; onClose: () => void }> = (
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4 py-8">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-glow">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-white/15 bg-[#0B0E1A] p-6 shadow-glow">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-xl font-bold tracking-tight">Cancel booking?</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-xl p-1 text-ink-500 hover:bg-ink-100">
+          <h2 className="text-xl font-bold tracking-tight text-white">Cancel booking?</h2>
+          <button onClick={onClose} aria-label="Close" className="rounded-xl p-1 text-white/60 transition hover:bg-white/10 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="mt-3 text-sm text-ink-600">
+        <p className="mt-3 text-sm text-white/65">
           {refundAmount > 0
-            ? <>You'll be refunded <strong>{refundLabel}</strong> to the original payment method within 2–10 business days.</>
-            : <>Pickup is in <strong>less than 24 hours</strong>. This cancellation is <strong>non-refundable</strong> per our policy.</>}
+            ? <>You'll be refunded <strong className="text-white">{refundLabel}</strong> to the original payment method within 2–10 business days.</>
+            : <>Pickup is in <strong className="text-white">less than 24 hours</strong>. This cancellation is <strong className="text-white">non-refundable</strong> per our policy.</>}
         </p>
 
         <label className="mt-4 block text-sm">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Reason (optional)</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/45">Reason (optional)</span>
           <textarea
             value={reason}
             onChange={e => setReason(e.target.value)}
             rows={3}
             placeholder="Tell us what changed — helps us learn"
-            className="mt-1 w-full rounded-2xl border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+            className="mt-1 w-full rounded-2xl border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-500"
           />
         </label>
 
         {error ? (
-          <div className="mt-3 inline-flex w-full items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-3 inline-flex w-full items-start gap-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             {error}
           </div>
         ) : null}
 
         <div className="mt-5 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="text-sm font-semibold text-ink-600 hover:text-ink-900">Keep booking</button>
+          <button onClick={onClose} className="text-sm font-semibold text-white/65 transition hover:text-white">Keep booking</button>
           <button
             onClick={onConfirm}
             disabled={busy}

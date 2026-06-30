@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export const SiteFooter: React.FC = () => (
-  <footer className="mt-32 bg-brand-900 text-ink-300">
+  <footer className="border-t border-white/10 bg-[#070912] text-white/60">
     <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-4">
       <div className="md:col-span-2">
         <div className="flex items-center gap-3">

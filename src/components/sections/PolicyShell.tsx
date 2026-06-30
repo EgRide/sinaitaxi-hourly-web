@@ -8,6 +8,7 @@ import { ArrowRight } from 'lucide-react';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
+import { Reveal } from '@/components/Reveal';
 
 export interface PolicySection {
   id: string;
@@ -27,20 +28,26 @@ interface Props {
 export const PolicyShell: React.FC<Props> = ({ eyebrow, title, subtitle, lastUpdated, sections, cta }) => (
   <>
     <SiteHeader />
-    <main>
+    <main className="bg-[#070912] text-white">
       {/* Hero */}
-      <section className="bg-brand-900 text-white">
+      <section className="relative isolate overflow-hidden bg-[#070912] text-white">
+        <div aria-hidden className="absolute inset-0 -z-10">
+          <div className="absolute -left-32 top-[-14%] h-[38rem] w-[38rem] rounded-full bg-brand-500/20 blur-[130px]" />
+          <div className="absolute right-[-12%] top-0 h-[34rem] w-[34rem] rounded-full bg-violet-600/20 blur-[130px]" />
+        </div>
         <div className="mx-auto max-w-6xl px-6 pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-36">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">{eyebrow}</span>
-          <h1 className="mt-3 max-w-3xl text-5xl font-extrabold leading-[0.95] tracking-tightest sm:text-6xl md:text-7xl">
-            {title}
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-300">
-            {subtitle}
-          </p>
-          <p className="mt-4 text-xs uppercase tracking-[0.18em] text-white/40">
-            Last updated · {new Date(lastUpdated).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <Reveal>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">{eyebrow}</span>
+            <h1 className="mt-3 max-w-3xl text-5xl font-extrabold leading-[0.95] tracking-tightest text-white sm:text-6xl md:text-7xl">
+              {title}
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/65">
+              {subtitle}
+            </p>
+            <p className="mt-4 text-xs uppercase tracking-[0.18em] text-white/40">
+              Last updated · {new Date(lastUpdated).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </Reveal>
         </div>
       </section>
 
@@ -50,11 +57,11 @@ export const PolicyShell: React.FC<Props> = ({ eyebrow, title, subtitle, lastUpd
           {/* TOC */}
           <aside className="hidden lg:block">
             <nav className="sticky top-24">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-500">On this page</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">On this page</h3>
               <ul className="mt-4 space-y-2">
                 {sections.map(s => (
                   <li key={s.id}>
-                    <a href={`#${s.id}`} className="text-sm text-ink-600 hover:text-brand-600">{s.title}</a>
+                    <a href={`#${s.id}`} className="text-sm text-white/55 transition hover:text-brand-300">{s.title}</a>
                   </li>
                 ))}
               </ul>
@@ -63,12 +70,14 @@ export const PolicyShell: React.FC<Props> = ({ eyebrow, title, subtitle, lastUpd
 
           {/* Sections */}
           <div className="max-w-2xl space-y-12">
-            {sections.map(s => (
+            {sections.map((s, i) => (
               <section key={s.id} id={s.id} className="scroll-mt-24">
-                <h2 className="text-2xl font-extrabold tracking-tighter text-ink-900 md:text-3xl">{s.title}</h2>
-                <div className="prose prose-ink mt-3 max-w-none text-base leading-relaxed text-ink-700 [&>p]:mt-3 [&>ul]:mt-3 [&>ul]:list-disc [&>ul]:pl-6 [&>ul>li]:mt-1.5 [&>strong]:font-semibold">
-                  {s.body}
-                </div>
+                <Reveal delay={Math.min(i, 4) * 60}>
+                  <h2 className="text-2xl font-extrabold tracking-tighter text-white md:text-3xl">{s.title}</h2>
+                  <div className="mt-3 max-w-none text-base leading-relaxed text-white/70 [&>p]:mt-3 [&>ul]:mt-3 [&>ul]:list-disc [&>ul]:pl-6 [&>ul>li]:mt-1.5 [&>strong]:font-semibold [&_strong]:text-white/90">
+                    {s.body}
+                  </div>
+                </Reveal>
               </section>
             ))}
           </div>
@@ -78,13 +87,16 @@ export const PolicyShell: React.FC<Props> = ({ eyebrow, title, subtitle, lastUpd
       {/* CTA */}
       {cta ? (
         <section className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="rounded-[28px] bg-ink-50 px-8 py-12 text-center sm:px-14">
-            <h2 className="text-3xl font-extrabold tracking-tightest text-ink-900 sm:text-4xl">Still need help?</h2>
-            <Link href={cta.href} className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700">
-              {cta.label}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <Reveal>
+            <div className="relative isolate overflow-hidden rounded-[28px] border border-white/10 bg-[#0B0E1A] px-8 py-12 text-center sm:px-14">
+              <div aria-hidden className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-500/20 blur-[110px]" />
+              <h2 className="text-3xl font-extrabold tracking-tightest text-white sm:text-4xl">Still need help?</h2>
+              <Link href={cta.href} className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90">
+                {cta.label}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </Reveal>
         </section>
       ) : null}
     </main>

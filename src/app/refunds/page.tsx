@@ -33,7 +33,7 @@ const SECTIONS: PolicySection[] = [
         <ul>
           <li>
             <strong>More than 24 hours before pickup.</strong> Cancel from{' '}
-            <a href="/account" className="text-brand-600 hover:underline">My Rentals</a>{' '}
+            <a href="/account" className="text-brand-300 hover:underline">My Rentals</a>{' '}
             for a full refund to the original payment method. Refunds reach your
             card within 5-10 business days.
           </li>
@@ -107,7 +107,7 @@ const SECTIONS: PolicySection[] = [
       <>
         <p>
           If you believe a charge is wrong, email{' '}
-          <a href="mailto:sales@sinaitaxi.com" className="text-brand-600 hover:underline">
+          <a href="mailto:sales@sinaitaxi.com" className="text-brand-300 hover:underline">
             sales@sinaitaxi.com
           </a>{' '}
           before opening a chargeback. We resolve most disputes within two

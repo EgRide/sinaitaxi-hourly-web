@@ -18,9 +18,8 @@ export const Hero: React.FC = () => (
         className="absolute inset-0 opacity-[0.05]"
         style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '5px 5px' }}
       />
-      {/* Vignette + fade into the next (light) section. */}
-      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_-10%,transparent,rgba(7,9,18,0.6))]" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-white" />
+      {/* Vignette into the dark page below. */}
+      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_-10%,transparent,rgba(7,9,18,0.55))]" />
     </div>
 
     <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-20 pb-24 sm:pt-24 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pt-28 lg:pb-32">
@@ -34,9 +33,7 @@ export const Hero: React.FC = () => (
         <h1 className="animate-fadeup mt-6 text-6xl font-extrabold leading-[0.92] tracking-tightest sm:text-7xl lg:text-[88px]" style={{ animationDelay: '0.05s' }}>
           Your day,
           <br />
-          <span className="bg-gradient-to-r from-brand-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-            driven.
-          </span>
+          <span className="text-gradient">driven.</span>
         </h1>
 
         <p className="animate-fadeup mt-6 max-w-md text-lg leading-relaxed text-white/65" style={{ animationDelay: '0.12s' }}>

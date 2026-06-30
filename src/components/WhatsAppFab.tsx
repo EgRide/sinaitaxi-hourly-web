@@ -15,7 +15,7 @@ export const WhatsAppFab: React.FC = () => {
       target="_blank"
       rel="noreferrer"
       aria-label="Chat with us on WhatsApp"
-      className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-emerald-600">
+      className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-glow ring-1 ring-white/10 transition hover:bg-emerald-600">
       <MessageCircle className="h-4 w-4" />
       <span className="hidden sm:inline">Need help?</span>
     </a>

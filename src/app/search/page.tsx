@@ -14,6 +14,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { api, type OfferCard, type OffersResult } from '@/lib/api';
 import { classTier, ClassBadge, tierBorderClass } from '@/components/ClassBadge';
+import { Reveal } from '@/components/Reveal';
 
 type SP = {
   countryCode?: string;
@@ -106,33 +107,37 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
   return (
     <>
       <SiteHeader />
-      <main className="bg-ink-50/40 min-h-[60vh]">
+      <main className="relative isolate min-h-[60vh] bg-[#070912] text-white">
+        <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute right-[-10%] top-[-10%] h-[34rem] w-[34rem] rounded-full bg-violet-600/15 blur-[130px]" />
+          <div className="absolute bottom-[-25%] left-[-8%] h-[30rem] w-[30rem] rounded-full bg-brand-500/15 blur-[130px]" />
+        </div>
         {/* Context bar */}
-        <section className="border-b border-ink-100 bg-white">
+        <section className="border-b border-white/10 bg-white/[0.04] backdrop-blur-xl">
           <div className="mx-auto max-w-6xl px-6 py-7">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Marketplace</span>
-                <h1 className="mt-2 truncate text-3xl font-extrabold tracking-tightest sm:text-4xl">
-                  Offers in <span className="text-brand-700">{polygonName}</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">Marketplace</span>
+                <h1 className="mt-2 truncate text-3xl font-extrabold tracking-tightest text-white sm:text-4xl">
+                  Offers in <span className="text-gradient">{polygonName}</span>
                 </h1>
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-600">
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/65">
                   {sp.pickupAddress ? (
-                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-ink-400" /> {sp.pickupAddress}</span>
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-brand-300" /> {sp.pickupAddress}</span>
                   ) : null}
                   {sp.pickupAt ? (
-                    <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-ink-400" /> {formatDateTime(sp.pickupAt)}</span>
+                    <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-brand-300" /> {formatDateTime(sp.pickupAt)}</span>
                   ) : null}
                   <span className="inline-flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-ink-400" />
+                    <Receipt className="h-3.5 w-3.5 text-brand-300" />
                     {durationHours} {durationHours === 1 ? 'hour' : 'hours'}
                     {hoursPerDay && days ? ` · ${days} days` : ''}
                   </span>
-                  <span className="hidden text-ink-400 lg:inline">·</span>
-                  <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-ink-400" /> {countryName}</span>
+                  <span className="hidden text-white/30 lg:inline">·</span>
+                  <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-brand-300" /> {countryName}</span>
                 </div>
               </div>
-              <Link href="/" className="inline-flex items-center gap-1.5 self-start rounded-full border border-ink-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-ink-700 transition hover:border-ink-300 hover:text-ink-900 lg:self-auto">
+              <Link href="/" className="inline-flex items-center gap-1.5 self-start rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white/80 backdrop-blur transition hover:border-white/30 hover:text-white lg:self-auto">
                 Edit search
               </Link>
             </div>
@@ -146,7 +151,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
                     hour: 'numeric', minute: '2-digit',
                   });
                   return (
-                    <li key={i} className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">
+                    <li key={i} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-white/80">
                       Day {i + 1} · {label} · {d.hours}h
                     </li>
                   );
@@ -155,7 +160,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
             ) : hoursPerDay && hoursPerDay.length > 1 ? (
               <ul className="mt-5 flex flex-wrap gap-2">
                 {hoursPerDay.map((h, i) => (
-                  <li key={i} className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">
+                  <li key={i} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-white/80">
                     Day {i + 1} · {h} {h === 1 ? 'hour' : 'hours'}
                   </li>
                 ))}
@@ -173,22 +178,24 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3 pb-5">
-                <p className="text-sm text-ink-600">
-                  <span className="font-bold text-ink-900">{offers.length}</span>
+                <p className="text-sm text-white/65">
+                  <span className="font-bold text-white">{offers.length}</span>
                   {' '}{offers.length === 1 ? 'vehicle option' : 'vehicle options'} ·{' '}
-                  <span className="font-semibold text-emerald-700">cheapest price first</span>
+                  <span className="font-semibold text-emerald-400">cheapest price first</span>
                 </p>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500">
-                  <ShieldCheck className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+                  <ShieldCheck className="h-3.5 w-3.5 text-brand-300" />
                   Total shown = total at checkout
                 </span>
               </div>
 
-              <ol className="space-y-4">
+              <div className="space-y-4">
                 {offers.map((offer, idx) => (
-                  <OfferRow key={offer.offerKey} offer={offer} rank={idx + 1} searchParams={sp} />
+                  <Reveal key={offer.offerKey} delay={Math.min(idx, 6) * 70}>
+                    <OfferRow offer={offer} rank={idx + 1} searchParams={sp} />
+                  </Reveal>
                 ))}
-              </ol>
+              </div>
             </>
           )}
         </section>
@@ -208,22 +215,23 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
   const tier = classTier(offer.vehicleClass.slug, offer.vehicleClass.label);
 
   return (
-    <li className={`overflow-hidden rounded-3xl border ${tierBorderClass(tier)} bg-white shadow-soft transition hover:shadow-glow`}>
+    <article className={`group overflow-hidden rounded-3xl border ${tierBorderClass(tier)} bg-white/[0.05] backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/[0.07]`}>
       <div className="grid gap-0 md:grid-cols-[280px_1fr_auto]">
         {/* Photo — PHP serves car illustrations on transparent
-            backgrounds, so use object-contain with padding to
-            avoid cropping the wheels/body. */}
-        <div className="relative aspect-[4/3] md:aspect-auto md:h-full bg-gradient-to-br from-ink-50 to-white">
+            backgrounds, so use object-contain with padding to avoid
+            cropping the wheels/body. The plate stays light so the
+            transparent PNG reads against the dark card. */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-white to-ink-100 md:aspect-auto md:h-full">
           <Image
             src={photo}
             alt={`${offer.vehicleClass.label} class`}
             fill
             sizes="(min-width: 768px) 280px, 100vw"
-            className="object-contain p-5"
+            className="object-contain p-5 transition duration-700 group-hover:scale-[1.04]"
             unoptimized
           />
           {rank === 1 ? (
-            <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-700 shadow-sm backdrop-blur">
+            <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm">
               <Star className="h-3 w-3 fill-current" />
               Best price
             </span>
@@ -233,97 +241,97 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
         {/* Body */}
         <div className="px-6 py-6">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h3 className="text-2xl font-extrabold tracking-tighter">{offer.vehicleClass.label}</h3>
+            <h3 className="text-2xl font-extrabold tracking-tighter text-white">{offer.vehicleClass.label}</h3>
             {tier ? <ClassBadge tier={tier} className="self-center" /> : null}
-            <span className="text-sm text-ink-500">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</span>
+            <span className="text-sm text-white/45">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</span>
           </div>
           {offer.ruleName ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-ink-500">
-              <Tag className="h-3.5 w-3.5" />
+            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.12em] text-white/45">
+              <Tag className="h-3.5 w-3.5 text-brand-300" />
               {offer.ruleName}
             </p>
           ) : null}
 
-          <ul className="mt-5 grid gap-x-6 gap-y-2 text-sm text-ink-700 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-5 grid gap-x-6 gap-y-2 text-sm text-white/65 sm:grid-cols-2 lg:grid-cols-3">
             <li className="inline-flex items-center gap-1.5">
-              <Gauge className="h-3.5 w-3.5 text-ink-400" />
+              <Gauge className="h-3.5 w-3.5 text-brand-300" />
               {offer.includedKm} km included
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-ink-400" />
+              <Clock className="h-3.5 w-3.5 text-brand-300" />
               {offer.includedKmPerHour} km / hour
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Receipt className="h-3.5 w-3.5 text-ink-400" />
+              <Receipt className="h-3.5 w-3.5 text-brand-300" />
               Overage {formatPrice(offer.overageRatePerKm, offer.currency)}/km
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-ink-400" />
+              <Users className="h-3.5 w-3.5 text-brand-300" />
               {offer.vehicleClass.seats}
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <Briefcase className="h-3.5 w-3.5 text-ink-400" />
+              <Briefcase className="h-3.5 w-3.5 text-brand-300" />
               Luggage room
             </li>
             <li className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-ink-400" />
+              <ShieldCheck className="h-3.5 w-3.5 text-brand-300" />
               Free cancel 24h+
             </li>
           </ul>
         </div>
 
         {/* Price + CTA */}
-        <div className="flex flex-col items-stretch justify-between gap-4 border-t border-ink-100 px-6 py-6 md:items-end md:border-l md:border-t-0">
+        <div className="flex flex-col items-stretch justify-between gap-4 border-t border-white/10 px-6 py-6 md:items-end md:border-l md:border-t-0">
           <div className="text-right">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-ink-500">
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-white/45">
               {offer.partnerCount > 1 ? 'From' : 'Total'}
             </div>
-            <div className="mt-1 text-3xl font-extrabold tracking-tightest text-ink-900">
+            <div className="mt-1 text-3xl font-extrabold tracking-tightest text-white">
               {formatPrice(offer.totalPrice, offer.currency)}
             </div>
             {offer.partnerCount > 1 ? (
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400">
                 Cheapest of {offer.partnerCount} partners
               </div>
             ) : null}
-            <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-ink-500">Paid in full at checkout</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-white/45">Paid in full at checkout</div>
           </div>
           <Link
             href={checkoutHref}
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-brand-600 px-5 py-3 text-sm font-bold uppercase tracking-[0.1em] text-white transition hover:bg-brand-700">
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-bold uppercase tracking-[0.1em] text-white shadow-glow transition hover:brightness-110">
             Select
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
-    </li>
+    </article>
   );
 };
 
 const ErrorPanel: React.FC<{ message: string }> = ({ message }) => (
-  <div className="inline-flex w-full items-center gap-2 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+  <div className="inline-flex w-full items-center gap-2 rounded-3xl border border-red-400/30 bg-red-500/10 px-5 py-4 text-sm text-red-300 backdrop-blur-xl">
     <AlertCircle className="h-4 w-4" />
     {message}
   </div>
 );
 
 const EmptyState: React.FC<{ polygonName: string; countryName: string }> = ({ polygonName, countryName }) => (
-  <div className="rounded-3xl border border-dashed border-ink-200 bg-white p-10 text-center">
-    <span className="inline-flex items-center gap-2 rounded-full bg-ink-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-700">
+  <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-10 text-center backdrop-blur-xl">
+    <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">
       No matches
     </span>
-    <h2 className="mt-5 text-2xl font-extrabold tracking-tighter">No partners available for this search</h2>
-    <p className="mt-3 mx-auto max-w-lg text-sm leading-relaxed text-ink-600">
-      No partner is currently publishing prices for <strong>{polygonName}</strong> in {countryName}
+    <h2 className="mt-5 text-2xl font-extrabold tracking-tighter text-white">No partners available for this search</h2>
+    <p className="mt-3 mx-auto max-w-lg text-sm leading-relaxed text-white/65">
+      No partner is currently publishing prices for <strong className="text-white">{polygonName}</strong> in {countryName}
       that match your pickup time and duration. Try a different time or area — or contact us via
       WhatsApp and we'll match you with a partner directly.
     </p>
     <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-      <Link href="/" className="inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-brand-700">
+      <Link href="/" className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-bold text-white shadow-glow transition hover:brightness-110">
         New search
         <ArrowRight className="h-4 w-4" />
       </Link>
-      <a href="https://wa.me/441908380111" target="_blank" rel="noreferrer" className="text-sm font-semibold text-ink-700 hover:text-ink-900">
+      <a href="https://wa.me/441908380111" target="_blank" rel="noreferrer" className="text-sm font-semibold text-white/70 hover:text-white">
         WhatsApp support →
       </a>
     </div>

@@ -1,8 +1,8 @@
 'use client';
 
-// Refined sticky masthead. Solid white with subtle blur — works
-// against both the dark hero photograph on the homepage and the
-// light surfaces on every other route.
+// Refined sticky masthead. Dark translucent glass — sits on the
+// 2026 near-black canvas, the wordmark + nav read in white, and the
+// primary CTA carries the signature vivid gradient.
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -19,18 +19,18 @@ const NAV = [
 export const SiteHeader: React.FC = () => {
   const pathname = usePathname() ?? '/';
   return (
-    <header className="sticky top-0 z-30 border-b border-ink-100/60 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#070912]/80 backdrop-blur supports-[backdrop-filter]:bg-[#070912]/70">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-6">
         <Link href="/" className="inline-flex items-center gap-2.5" aria-label="SinaiTaxi Hourly">
           <Image
-            src="/sinaitaxi-logo-dark.png"
+            src="/sinaitaxi-logo-light.png"
             alt="SinaiTaxi"
             width={132}
             height={24}
             priority
             className="h-6 w-auto"
           />
-          <span className="rounded-full border border-ink-200 bg-ink-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-ink-600">
+          <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-white/80">
             Hourly
           </span>
         </Link>
@@ -43,7 +43,7 @@ export const SiteHeader: React.FC = () => {
                 href={item.href}
                 className={cn(
                   'font-semibold transition',
-                  active ? 'text-ink-900' : 'text-ink-600 hover:text-ink-900',
+                  active ? 'text-white' : 'text-white/70 hover:text-white',
                 )}>
                 {item.label}
               </Link>
@@ -51,7 +51,7 @@ export const SiteHeader: React.FC = () => {
           })}
           <Link
             href="/#search"
-            className="rounded-full bg-brand-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white shadow-sm transition hover:bg-brand-700">
+            className="rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white shadow-sm transition hover:opacity-90">
             Book now
           </Link>
         </nav>

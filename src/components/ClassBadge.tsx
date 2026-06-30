@@ -17,10 +17,11 @@ export const classTier = (...parts: (string | null | undefined)[]): ClassTier | 
 };
 
 // Border classes for cards, so the whole tile reads as "privileged".
+// Default is a dark-theme hairline (the 2026 surfaces are dark glass).
 export const tierBorderClass = (tier: ClassTier | null): string =>
-  tier === 'vip' ? 'border-accent-400'
-  : tier === 'electric' ? 'border-emerald-300'
-  : 'border-ink-100';
+  tier === 'vip' ? 'border-accent-400/70'
+  : tier === 'electric' ? 'border-emerald-400/60'
+  : 'border-white/10';
 
 export const ClassBadge: React.FC<{ tier: ClassTier; className?: string }> = ({ tier, className = '' }) => {
   if (tier === 'electric') {

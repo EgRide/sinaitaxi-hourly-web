@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, AlertCircle } from 'lucide-react';
 import { Flag } from '@/components/Flag';
+import { Reveal } from '@/components/Reveal';
 import type { Country } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
@@ -69,21 +70,23 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
 
   return (
     <section id="destinations" className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">Destinations</span>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
-            Pick where you're going.
-          </h2>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-600">
-            Hourly chauffeur service in every country below. Tap a country to see every city
-            we cover and live partner offers.
+      <Reveal>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">Destinations</span>
+            <h2 className="mt-3 text-4xl font-extrabold tracking-tightest text-white md:text-5xl">
+              Pick where you're <span className="text-gradient">going.</span>
+            </h2>
+            <p className="mt-3 max-w-xl text-base leading-relaxed text-white/65">
+              Hourly chauffeur service in every country below. Tap a country to see every city
+              we cover and live partner offers.
+            </p>
+          </div>
+          <p className="text-sm text-white/45 md:max-w-[200px] md:text-right">
+            {filtered.length} of {countries.length} countries in {REGIONS.find(r => r.id === region)?.label}.
           </p>
         </div>
-        <p className="text-sm text-ink-500 md:max-w-[200px] md:text-right">
-          {filtered.length} of {countries.length} countries in {REGIONS.find(r => r.id === region)?.label}.
-        </p>
-      </div>
+      </Reveal>
 
       {/* Region chips */}
       <div className="mb-8 flex flex-wrap gap-2">
@@ -94,8 +97,8 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
             className={cn(
               'rounded-full border px-4 py-2 text-sm font-medium transition',
               region === r.id
-                ? 'border-ink-900 bg-ink-900 text-white'
-                : 'border-ink-200 bg-white text-ink-700 hover:border-ink-300',
+                ? 'border-transparent bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 text-white'
+                : 'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:text-white',
             )}>
             {r.label}
           </button>
@@ -103,7 +106,7 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
       </div>
 
       {error ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800">
+        <div className="rounded-3xl border border-red-400/30 bg-red-500/10 p-8 text-red-200 backdrop-blur">
           <p className="inline-flex items-center gap-2 font-bold">
             <AlertCircle className="h-4 w-4" />
             Could not load destinations.
@@ -111,7 +114,7 @@ export const CountryGridClient: React.FC<Props> = ({ countries, error }) => {
           <p className="mt-1 text-sm">{error}</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-3xl border border-ink-100 bg-white p-8 text-center text-sm text-ink-500">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/45 backdrop-blur">
           No countries in this region yet — try another tab.
         </div>
       ) : (
@@ -131,19 +134,19 @@ const CountryCard: React.FC<{ country: Country; index: number }> = ({ country, i
     transition={{ duration: 0.32, delay: Math.min(index * 0.02, 0.3), ease: [0.22, 1, 0.36, 1] }}>
     <Link
       href={`/destinations/${country.code.toLowerCase()}`}
-      className="group relative block overflow-hidden rounded-3xl border border-ink-100 bg-white p-5 transition hover:border-brand-200 hover:shadow-soft">
+      className="group relative block overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl transition hover:-translate-y-1 hover:border-white/20">
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-brand-100/0 blur-2xl transition-colors duration-500 group-hover:bg-brand-100/80"
+        className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-brand-500/0 blur-2xl transition-colors duration-500 group-hover:bg-brand-500/20"
       />
       <div className="relative flex items-start justify-between gap-4">
         <Flag code={country.code} size="lg" />
-        <ArrowUpRight className="h-5 w-5 text-ink-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand-500" />
+        <ArrowUpRight className="h-5 w-5 text-white/40 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand-300" />
       </div>
-      <h3 className="mt-4 truncate text-base font-semibold tracking-tight text-ink-900">
+      <h3 className="mt-4 truncate text-base font-semibold tracking-tight text-white">
         {country.name}
       </h3>
-      <p className="mt-1 text-xs text-ink-500">
+      <p className="mt-1 text-xs text-white/45">
         {country.polygonCount && country.polygonCount > 0
           ? `${country.polygonCount} ${country.polygonCount === 1 ? 'city' : 'cities'}`
           : 'Hourly available'}

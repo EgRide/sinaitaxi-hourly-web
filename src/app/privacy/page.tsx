@@ -20,7 +20,7 @@ const SECTIONS: PolicySection[] = [
         </p>
         <p>
           Privacy questions and data-subject requests can be sent to{' '}
-          <a href="mailto:privacy@sinaitaxi.com" className="text-brand-600 hover:underline">
+          <a href="mailto:privacy@sinaitaxi.com" className="text-brand-300 hover:underline">
             privacy@sinaitaxi.com
           </a>.
         </p>

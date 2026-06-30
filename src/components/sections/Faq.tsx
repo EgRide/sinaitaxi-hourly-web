@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
+import { Reveal } from '@/components/Reveal';
 
 const QUESTIONS = [
   {
@@ -41,48 +42,52 @@ const QUESTIONS = [
 export const Faq: React.FC = () => {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section className="bg-ink-50/60 py-24 lg:py-32">
+    <section className="bg-[#0B0E1A] py-24 lg:py-32">
       <div className="mx-auto grid max-w-6xl gap-14 px-6 lg:grid-cols-[1fr_1.6fr]">
-        <div className="max-w-md">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-600">FAQ</span>
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tightest md:text-5xl">
-            Questions we hear <span className="text-ink-400">often.</span>
-          </h2>
-          <p className="mt-5 text-base leading-relaxed text-ink-600">
-            Can't find what you're after? Email{' '}
-            <a href="mailto:sales@sinaitaxi.com" className="font-semibold text-brand-600 hover:text-brand-700">
-              sales@sinaitaxi.com
-            </a>{' '}
-            or message us on WhatsApp — we reply in business hours.
-          </p>
-        </div>
+        <Reveal>
+          <div className="max-w-md">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">FAQ</span>
+            <h2 className="mt-3 text-4xl font-extrabold tracking-tightest text-white md:text-5xl">
+              Questions we hear <span className="text-gradient">often.</span>
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-white/65">
+              Can't find what you're after? Email{' '}
+              <a href="mailto:sales@sinaitaxi.com" className="font-semibold text-brand-300 hover:text-white">
+                sales@sinaitaxi.com
+              </a>{' '}
+              or message us on WhatsApp — we reply in business hours.
+            </p>
+          </div>
+        </Reveal>
 
-        <ul className="space-y-3">
-          {QUESTIONS.map((item, i) => {
-            const isOpen = open === i;
-            return (
-              <li key={i} className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-soft">
-                <button
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-ink-50/40">
-                  <span className="text-base font-bold text-ink-900 sm:text-lg">{item.q}</span>
-                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
-                    {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  </span>
-                </button>
-                <div
-                  className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                  <div className="overflow-hidden">
-                    <p className="px-6 pb-6 text-base leading-relaxed text-ink-600">
-                      {item.a}
-                    </p>
+        <Reveal delay={120}>
+          <ul className="space-y-3">
+            {QUESTIONS.map((item, i) => {
+              const isOpen = open === i;
+              return (
+                <li key={i} className="overflow-hidden rounded-2xl glass">
+                  <button
+                    onClick={() => setOpen(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-white/5">
+                    <span className="text-base font-bold text-white sm:text-lg">{item.q}</span>
+                    <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-white/5 text-brand-300 ring-1 ring-white/10">
+                      {isOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    </span>
+                  </button>
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                    <div className="overflow-hidden">
+                      <p className="px-6 pb-6 text-base leading-relaxed text-white/65">
+                        {item.a}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </Reveal>
       </div>
     </section>
   );
