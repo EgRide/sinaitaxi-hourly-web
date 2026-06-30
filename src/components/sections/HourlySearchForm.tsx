@@ -279,8 +279,8 @@ export const HourlySearchForm: React.FC = () => {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="btn-primary mt-3 w-full py-3.5">
-        Search hourly options
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500 px-5 py-4 text-sm font-bold text-white shadow-[0_14px_40px_-12px_rgba(124,58,237,0.65)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
+        See cars
         <ArrowRight className="h-4 w-4" />
       </button>
     </form>
