@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown, CalendarDays } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown, CalendarDays, Globe2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, type ResolveAddressResult } from '@/lib/api';
 import { GooglePlacesAddress, type ResolvedPlace } from '@/components/sections/GooglePlacesAddress';
@@ -229,6 +229,13 @@ export const HourlySearchForm: React.FC = () => {
       className="rounded-[22px] bg-white p-4 sm:p-5">
       <GooglePlacesAddress onResolve={onPlaceResolved} />
 
+      {!resolution && !resolving ? (
+        <p className="mt-2 flex items-center gap-1.5 px-1 text-xs text-ink-500">
+          <Globe2 className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+          Covered in 60+ countries — start typing your pickup to see partners near you.
+        </p>
+      ) : null}
+
       <ResolutionPanel
         resolution={resolution}
         resolving={resolving}
@@ -334,18 +341,19 @@ const ResolutionPanel: React.FC<{
   if (matched && !candidatesOpen) {
     return (
       <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm text-emerald-800">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+        <div className="flex items-start gap-2 text-sm text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <span>
-            Service area: <strong>{matched.name}</strong>
-            <span className="ml-1 text-emerald-700/70">· {resolution.country.name}</span>
+            <span className="font-semibold">Covered</span> — vetted partners in{' '}
+            <strong>{matched.name}</strong>
+            <span className="text-emerald-700/70">, {resolution.country.name}</span>
           </span>
         </div>
         {candidates.length > 1 ? (
           <button
             type="button"
             onClick={onChangeClick}
-            className="text-xs font-semibold text-emerald-700 underline-offset-2 hover:underline">
+            className="shrink-0 text-xs font-semibold text-emerald-700 underline-offset-2 hover:underline">
             Change
           </button>
         ) : null}

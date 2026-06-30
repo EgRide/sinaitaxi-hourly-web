@@ -53,6 +53,29 @@ const formatPrice = (n: number, currency: string): string => {
   }
 };
 
+// Two-step progress cue, shown in both phases so the customer always
+// knows where they are (details → payment).
+const StepDot: React.FC<{ n: number; label: string; current: number }> = ({ n, label, current }) => {
+  const done = current > n;
+  const active = current === n;
+  return (
+    <div className={`inline-flex items-center gap-1.5 ${active ? 'text-brand-700' : done ? 'text-emerald-700' : 'text-ink-400'}`}>
+      <span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${done ? 'bg-emerald-500 text-white' : active ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-500'}`}>
+        {done ? '✓' : n}
+      </span>
+      {label}
+    </div>
+  );
+};
+
+const StepProgress: React.FC<{ current: 1 | 2 }> = ({ current }) => (
+  <div className="mb-5 flex items-center gap-3 text-xs font-semibold">
+    <StepDot n={1} label="Your details" current={current} />
+    <div className={`h-px w-8 ${current > 1 ? 'bg-emerald-400' : 'bg-ink-200'}`} />
+    <StepDot n={2} label="Payment" current={current} />
+  </div>
+);
+
 export const CheckoutForm: React.FC<Props> = (props) => {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -204,14 +227,34 @@ export const CheckoutForm: React.FC<Props> = (props) => {
 
   if (clientSecret && bookingId) {
     return (
-      <Elements stripe={stripePromise()} options={elementsOptions}>
-        <PayStep bookingId={bookingId} totalLabel={formatPrice(props.offer.totalPrice, props.offer.currency)} />
-      </Elements>
+      <div>
+        <StepProgress current={2} />
+        <Elements stripe={stripePromise()} options={elementsOptions}>
+          <PayStep bookingId={bookingId} totalLabel={formatPrice(props.offer.totalPrice, props.offer.currency)} />
+        </Elements>
+      </div>
     );
   }
 
   return (
     <form onSubmit={onStart} className="space-y-4">
+      {/* Mobile-only sticky summary — the offer summary sidebar drops
+          below the fold on mobile, so keep the total + trip in view
+          while the customer fills the form. Sits just under the
+          sticky site header (h-16). */}
+      <div className="sticky top-[72px] z-20 mb-1 flex items-center justify-between gap-3 rounded-2xl border border-ink-100 bg-white/95 px-4 py-2.5 shadow-soft backdrop-blur lg:hidden">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold text-ink-900">{props.offer.vehicleClass.label}</div>
+          <div className="text-[11px] text-ink-500">{props.durationHours}h · {props.offer.includedKm} km included</div>
+        </div>
+        <div className="shrink-0 text-right">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Total</div>
+          <div className="text-lg font-extrabold leading-tight text-ink-900">{formatPrice(total, props.offer.currency)}</div>
+        </div>
+      </div>
+
+      <StepProgress current={1} />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="First name">
           <input
