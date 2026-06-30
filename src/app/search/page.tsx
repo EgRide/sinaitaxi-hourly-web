@@ -13,6 +13,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { api, type OfferCard, type OffersResult } from '@/lib/api';
+import { classTier, ClassBadge, tierBorderClass } from '@/components/ClassBadge';
 
 type SP = {
   countryCode?: string;
@@ -203,9 +204,10 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
   params.set('offerKey', offer.offerKey);
   const checkoutHref = `/checkout?${params.toString()}`;
   const photo = offer.vehicleClass.photoUrl ?? FALLBACK_PHOTO;
+  const tier = classTier(offer.vehicleClass.slug, offer.vehicleClass.label);
 
   return (
-    <li className="overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
+    <li className={`overflow-hidden rounded-3xl border ${tierBorderClass(tier)} bg-white shadow-soft transition hover:shadow-glow`}>
       <div className="grid gap-0 md:grid-cols-[280px_1fr_auto]">
         {/* Photo — PHP serves car illustrations on transparent
             backgrounds, so use object-contain with padding to
@@ -231,6 +233,7 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
         <div className="px-6 py-6">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-2xl font-extrabold tracking-tighter">{offer.vehicleClass.label}</h3>
+            {tier ? <ClassBadge tier={tier} className="self-center" /> : null}
             <span className="text-sm text-ink-500">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</span>
           </div>
           {offer.ruleName ? (

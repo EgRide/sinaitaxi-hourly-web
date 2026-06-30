@@ -10,6 +10,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { api, type OfferCard } from '@/lib/api';
+import { classTier, ClassBadge } from '@/components/ClassBadge';
 import { CheckoutForm } from './CheckoutForm';
 
 type SP = {
@@ -153,7 +154,10 @@ const OfferSummary: React.FC<{
         <Car className="h-5 w-5" />
       </div>
       <div>
-        <div className="text-lg font-bold">{offer.vehicleClass.label}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="text-lg font-bold">{offer.vehicleClass.label}</div>
+          {(() => { const t = classTier(offer.vehicleClass.slug, offer.vehicleClass.label); return t ? <ClassBadge tier={t} /> : null; })()}
+        </div>
         <div className="text-xs text-ink-500">{offer.vehicleClass.description} · {offer.vehicleClass.seats}</div>
       </div>
     </div>

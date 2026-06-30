@@ -10,6 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Users, Briefcase, ArrowRight, Baby } from 'lucide-react';
 import { api, type VehicleClass } from '@/lib/api';
+import { classTier, ClassBadge, tierBorderClass } from '@/components/ClassBadge';
 
 export const VehicleClasses: React.FC = async () => {
   let classes: VehicleClass[] = [];
@@ -58,8 +59,10 @@ export const VehicleClasses: React.FC = async () => {
   );
 };
 
-const ClassCard: React.FC<{ cls: VehicleClass }> = ({ cls }) => (
-  <article className="group overflow-hidden rounded-3xl border border-ink-100 bg-white shadow-soft transition hover:shadow-glow">
+const ClassCard: React.FC<{ cls: VehicleClass }> = ({ cls }) => {
+  const tier = classTier(cls.name, cls.vehicleTypeName);
+  return (
+  <article className={`group overflow-hidden rounded-3xl border ${tierBorderClass(tier)} bg-white shadow-soft transition hover:shadow-glow`}>
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-ink-50 to-white">
       {cls.photoUrl ? (
         <Image
@@ -76,7 +79,10 @@ const ClassCard: React.FC<{ cls: VehicleClass }> = ({ cls }) => (
       </span>
     </div>
     <div className="p-7">
-      <h3 className="text-2xl font-extrabold tracking-tighter">{cls.name}</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-2xl font-extrabold tracking-tighter">{cls.name}</h3>
+        {tier ? <ClassBadge tier={tier} /> : null}
+      </div>
       {cls.description ? (
         <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-600 line-clamp-2">{cls.description}</p>
       ) : null}
@@ -105,4 +111,5 @@ const ClassCard: React.FC<{ cls: VehicleClass }> = ({ cls }) => (
       </dl>
     </div>
   </article>
-);
+  );
+};
