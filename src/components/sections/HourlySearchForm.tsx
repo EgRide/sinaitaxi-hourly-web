@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown, CalendarDays, Globe2 } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, CheckCircle2, AlertCircle, ChevronDown, CalendarDays, Globe2, MapPin, Plus, X, GripVertical, Sparkles, Route } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, type ResolveAddressResult } from '@/lib/api';
 import { GooglePlacesAddress, type ResolvedPlace } from '@/components/sections/GooglePlacesAddress';
@@ -28,6 +28,42 @@ interface PickedAddress {
   formattedAddress: string;
   lat: number;
   lng: number;
+}
+
+// One waypoint beyond the pickup. Keyed by a stable id so drag-reorder
+// (and Places autocomplete state) survive array moves.
+interface Stop {
+  id: string;
+  place: PickedAddress | null;
+}
+
+let _stopSeq = 0;
+const newStop = (): Stop => ({ id: `stop-${++_stopSeq}`, place: null });
+
+const MIN_HOURS = 4;
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const la1 = (a.lat * Math.PI) / 180;
+  const la2 = (b.lat * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// Rough itinerary estimate from straight-line legs — a SUGGESTION only.
+// Real road distance/time comes from the Distance Matrix once the server
+// key is enabled; until then this drives the recommended-hours nudge, and
+// never a charge. Road factor 1.3, ~35 km/h city average, ~20 min dwell
+// per stop.
+function estimateItinerary(points: { lat: number; lng: number }[]): { km: number; driveMin: number } {
+  if (points.length < 2) return { km: 0, driveMin: 0 };
+  let straight = 0;
+  for (let i = 1; i < points.length; i++) straight += haversineKm(points[i - 1]!, points[i]!);
+  const roadKm = straight * 1.3;
+  const driveMin = (roadKm / 35) * 60 + (points.length - 1) * 20;
+  return { km: Math.round(roadKm), driveMin: Math.round(driveMin) };
 }
 
 interface DayRow {
@@ -80,6 +116,13 @@ export const HourlySearchForm: React.FC = () => {
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [overridePolygonId, setOverridePolygonId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
+
+  // Multi-stop itinerary (beyond the pickup) + live estimates.
+  const [stops, setStops] = useState<Stop[]>([]);
+  const [decideLater, setDecideLater] = useState(false);
+  const [manualHours, setManualHours] = useState(false); // user overrode the recommendation
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [priceEstimate, setPriceEstimate] = useState<{ total: number; currency: string } | null>(null);
 
   // Mode
   const [mode, setMode] = useState<Mode>('hours');
@@ -181,6 +224,73 @@ export const HourlySearchForm: React.FC = () => {
     return null;
   }, [resolution, overridePolygonId]);
 
+  // ── Multi-stop handlers ──
+  const handleStopResolve = useCallback((place: ResolvedPlace, id?: string) => {
+    if (!id) return;
+    setStops(prev => prev.map(s => (s.id === id
+      ? { ...s, place: { formattedAddress: place.formattedAddress, lat: place.lat, lng: place.lng } }
+      : s)));
+  }, []);
+  const addStop = () => setStops(prev => (prev.length >= 6 ? prev : [...prev, newStop()]));
+  const removeStop = (id: string) => setStops(prev => prev.filter(s => s.id !== id));
+  const reorderStops = (from: number, to: number) => setStops(prev => {
+    if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+    const next = [...prev];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved!);
+    return next;
+  });
+  const handleHoursChange = (h: number) => { setManualHours(true); setHours(h); };
+  const handleDecideLater = (v: boolean) => {
+    setDecideLater(v);
+    if (v) { setManualHours(false); if (mode === 'hours') setHours(MIN_HOURS); }
+  };
+
+  // ── Itinerary geometry → recommended hours (estimate, not a charge) ──
+  const itineraryPoints = useMemo(() => {
+    const pts: { lat: number; lng: number }[] = [];
+    if (address) pts.push({ lat: address.lat, lng: address.lng });
+    for (const s of stops) if (s.place) pts.push({ lat: s.place.lat, lng: s.place.lng });
+    return pts;
+  }, [address, stops]);
+  const estimate = useMemo(() => estimateItinerary(itineraryPoints), [itineraryPoints]);
+  const recommendedHours = useMemo(
+    () => Math.min(23, Math.max(MIN_HOURS, Math.ceil(estimate.driveMin / 60))),
+    [estimate.driveMin],
+  );
+  const hasItinerary = !decideLater && itineraryPoints.length >= 2;
+
+  // Auto-apply the recommendation (hours mode) until the user overrides.
+  useEffect(() => {
+    if (mode !== 'hours' || decideLater || manualHours) return;
+    if (itineraryPoints.length >= 2 && recommendedHours !== hours) setHours(recommendedHours);
+  }, [recommendedHours, mode, decideLater, manualHours, itineraryPoints.length, hours]);
+
+  // Debounced live "estimated from" price via the central engine.
+  useEffect(() => {
+    if (!effectivePolygonId) { setPriceEstimate(null); return; }
+    const pickupIso = mode === 'hours'
+      ? pickupAt
+      : (daySchedule[0] ? `${daySchedule[0].date}T${daySchedule[0].time}` : pickupAt);
+    // NOTE: no distanceKm here on purpose. Offers + checkout price
+    // by-the-hour (distance-free), so the hero estimate must too, or it
+    // would show a higher "from" than the very next page. The itinerary
+    // still moves this price — via recommended HOURS (more stops → more
+    // hours → higher base). Distance re-enters all three together when
+    // the Distance Matrix key + extra-km charging land.
+    const t = setTimeout(() => {
+      api.quote({
+        polygonId: effectivePolygonId,
+        vehicleClass: 'economy-sedan',
+        pickupAt: pickupIso,
+        durationHours: totalHours,
+      })
+        .then(r => setPriceEstimate({ total: r.quote.total, currency: r.quote.currency }))
+        .catch(() => setPriceEstimate(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [effectivePolygonId, totalHours, pickupAt, mode, daySchedule]);
+
   const canSubmit = Boolean(
     address && effectivePolygonId && (
       mode === 'hours' ? pickupAt :
@@ -219,6 +329,19 @@ export const HourlySearchForm: React.FC = () => {
         daySchedule.map(r => `${r.date}T${r.time},${r.hours}`).join(';'),
       );
     }
+    // Itinerary → downstream. The engine price already reflects the
+    // duration; the estimated distance is a hint, never a charge.
+    if (decideLater) {
+      params.set('openItinerary', '1');
+    } else {
+      const placed = stops.filter(s => s.place);
+      if (placed.length) {
+        params.set('stops', JSON.stringify(placed.map(s => ({
+          address: s.place!.formattedAddress, lat: s.place!.lat, lng: s.place!.lng,
+        }))));
+        if (estimate.km > 0) params.set('estDistanceKm', String(estimate.km));
+      }
+    }
     router.push(`/search?${params.toString()}`);
   };
 
@@ -246,6 +369,38 @@ export const HourlySearchForm: React.FC = () => {
         onOverridePolygon={id => { setOverridePolygonId(id); setChanging(false); }}
       />
 
+      <StopsEditor
+        stops={stops}
+        decideLater={decideLater}
+        onDecideLater={handleDecideLater}
+        onResolve={handleStopResolve}
+        onAdd={addStop}
+        onRemove={removeStop}
+        onReorder={reorderStops}
+        dragIndex={dragIndex}
+        setDragIndex={setDragIndex}
+      />
+
+      {hasItinerary ? (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 text-violet-900">
+            <Route className="h-4 w-4 shrink-0 text-violet-600" />
+            <span>
+              ~<strong>{estimate.km} km</strong> · {itineraryPoints.length} stops · suggested{' '}
+              <strong>{recommendedHours}h</strong>
+            </span>
+          </div>
+          {mode === 'hours' && recommendedHours !== hours ? (
+            <button
+              type="button"
+              onClick={() => { setManualHours(false); setHours(recommendedHours); }}
+              className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-violet-700">
+              <Sparkles className="h-3 w-3" /> Use {recommendedHours}h
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {mode === 'hours' ? (
         <div className="mt-3">
           <Field label="Pickup date &amp; time" icon={<Calendar className="h-4 w-4" />}>
@@ -264,7 +419,7 @@ export const HourlySearchForm: React.FC = () => {
         mode={mode}
         onModeChange={setMode}
         hours={hours}
-        onHoursChange={setHours}
+        onHoursChange={handleHoursChange}
         days={days}
         onDaysChange={setDays}
         sameHoursEveryDay={sameHoursEveryDay}
@@ -276,6 +431,16 @@ export const HourlySearchForm: React.FC = () => {
         totalHours={totalHours}
       />
 
+      {priceEstimate ? (
+        <p className="mt-3 text-center text-xs text-ink-500">
+          Estimated from{' '}
+          <strong className="text-ink-900">
+            {new Intl.NumberFormat(undefined, { style: 'currency', currency: priceEstimate.currency, maximumFractionDigits: 0 }).format(priceEstimate.total)}
+          </strong>{' '}
+          · economy · you pick the class next
+        </p>
+      ) : null}
+
       <button
         type="submit"
         disabled={!canSubmit}
@@ -286,6 +451,90 @@ export const HourlySearchForm: React.FC = () => {
     </form>
   );
 };
+
+const StopsEditor: React.FC<{
+  stops: Stop[];
+  decideLater: boolean;
+  onDecideLater: (v: boolean) => void;
+  onResolve: (place: ResolvedPlace, id?: string) => void;
+  onAdd: () => void;
+  onRemove: (id: string) => void;
+  onReorder: (from: number, to: number) => void;
+  dragIndex: number | null;
+  setDragIndex: (i: number | null) => void;
+}> = ({ stops, decideLater, onDecideLater, onResolve, onAdd, onRemove, onReorder, dragIndex, setDragIndex }) => (
+  <div className="mt-3">
+    <div className="flex items-center justify-between px-1">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">
+        Stops <span className="text-ink-400">· optional</span>
+      </span>
+      <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-600">
+        <input
+          type="checkbox"
+          checked={decideLater}
+          onChange={e => onDecideLater(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-ink-300 text-brand-500 focus:ring-brand-500"
+        />
+        I&apos;ll decide later
+      </label>
+    </div>
+
+    {decideLater ? (
+      <div className="mt-2 rounded-2xl border border-dashed border-ink-200 bg-ink-50/50 px-4 py-3 text-xs leading-relaxed text-ink-500">
+        Open itinerary — book the car by the hour and direct the driver as you go. Starts at the {MIN_HOURS}-hour minimum; add stops anytime.
+      </div>
+    ) : (
+      <>
+        {stops.length > 0 ? (
+          <ul className="mt-2 space-y-2">
+            {stops.map((s, i) => (
+              <li
+                key={s.id}
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => { if (dragIndex !== null) onReorder(dragIndex, i); setDragIndex(null); }}
+                className={cn('transition', dragIndex === i ? 'opacity-40' : '')}>
+                <GooglePlacesAddress
+                  id={s.id}
+                  onResolve={onResolve}
+                  label={`Stop ${i + 1}`}
+                  placeholder="Add a stop — hotel, address, or landmark"
+                  trailing={
+                    <span className="flex items-center gap-0.5">
+                      <span
+                        draggable
+                        onDragStart={() => setDragIndex(i)}
+                        onDragEnd={() => setDragIndex(null)}
+                        onClick={e => e.preventDefault()}
+                        title="Drag to reorder"
+                        className="cursor-grab p-1 text-ink-300 hover:text-ink-500 active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4" />
+                      </span>
+                      <button
+                        type="button"
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); onRemove(s.id); }}
+                        title="Remove stop"
+                        className="p-1 text-ink-300 hover:text-red-500">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </span>
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {stops.length < 6 ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-brand-300 bg-brand-50/60 px-3 py-2 text-xs font-bold text-brand-700 transition hover:bg-brand-50">
+            <Plus className="h-3.5 w-3.5" /> Add stop
+          </button>
+        ) : null}
+      </>
+    )}
+  </div>
+);
 
 const ResolutionPanel: React.FC<{
   resolution: ResolveAddressResult | null;

@@ -83,13 +83,25 @@ const extractComponent = (
 };
 
 interface Props {
-  onResolve: (place: ResolvedPlace) => void;
+  // The second arg echoes the optional `id` prop, so a parent rendering
+  // many pickers (multi-stop) can keep ONE stable handler and still tell
+  // which field resolved — no per-render closures that would re-bind
+  // Autocomplete.
+  onResolve: (place: ResolvedPlace, id?: string) => void;
   // Free-text edits (no place selected yet) bubble up so the parent
   // can capture partial input; resolution waits for a real place pick.
-  onTextChange?: (text: string) => void;
+  onTextChange?: (text: string, id?: string) => void;
+  id?: string;
+  label?: string;
+  placeholder?: string;
+  icon?: React.ReactNode;
+  // Right-aligned slot on the label row (e.g. a drag handle + remove).
+  trailing?: React.ReactNode;
 }
 
-export const GooglePlacesAddress: React.FC<Props> = ({ onResolve, onTextChange }) => {
+export const GooglePlacesAddress: React.FC<Props> = ({
+  onResolve, onTextChange, id, label, placeholder, icon, trailing,
+}) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const acRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,24 +144,27 @@ export const GooglePlacesAddress: React.FC<Props> = ({ onResolve, onTextChange }
               ?? extractComponent(components, 'sublocality_level_1')
               ?? extractComponent(components, 'neighborhood'),
             administrativeArea: extractComponent(components, 'administrative_area_level_1'),
-          });
+          }, id);
         });
       })
       .catch((e: Error) => setError(e.message));
     return () => { cancelled = true; };
-  }, [onResolve]);
+  }, [onResolve, id]);
 
   return (
     <label className="block rounded-2xl border border-ink-200 bg-white px-4 py-3 focus-within:border-brand-500">
-      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
-        <MapPin className="h-3.5 w-3.5" />
-        Pickup location
+      <span className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-500">
+          {icon ?? <MapPin className="h-3.5 w-3.5" />}
+          {label ?? 'Pickup location'}
+        </span>
+        {trailing}
       </span>
       <input
         ref={inputRef}
         type="text"
-        placeholder={KEY ? 'Type a hotel, address, or landmark' : 'Type your pickup address'}
-        onChange={e => onTextChange?.(e.target.value)}
+        placeholder={placeholder ?? (KEY ? 'Type a hotel, address, or landmark' : 'Type your pickup address')}
+        onChange={e => onTextChange?.(e.target.value, id)}
         className="mt-1 w-full bg-transparent text-base outline-none placeholder:text-ink-400"
       />
       {!KEY ? (

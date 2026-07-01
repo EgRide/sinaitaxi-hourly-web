@@ -129,6 +129,24 @@ export const api = {
     return request<OffersResult>(`/v1/offers?${qs.toString()}`);
   },
 
+  // Central pricing engine — one itemised quote for a class + duration
+  // (+ optional itinerary distance). Used by the multi-stop search for a
+  // live "estimated from" price and, later, in-ride recalculation.
+  quote: (input: {
+    polygonId: string;
+    vehicleClass: string;
+    pickupAt?: string;
+    durationHours?: number;
+    daySchedule?: { date: string; time: string; hours: number }[];
+    distanceKm?: number;
+    airportPickup?: boolean;
+    meetGreet?: boolean;
+  }) =>
+    request<QuoteResult>('/v1/quote', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
   checkout: (input: CheckoutInput) =>
     request<CheckoutResult>('/v1/checkout', {
       method: 'POST',
@@ -292,6 +310,21 @@ export interface OfferCard {
   partnerCount: number;
   minimumApplied?: boolean;
   priceLines?: { kind: string; label: string; amount: number }[];
+}
+
+export interface QuoteLine { kind: string; label: string; amount: number; }
+export interface QuoteResult {
+  query: { polygonId: string; polygonName: string; countryCode: string; vehicleClass: string };
+  quote: {
+    currency: string;
+    requestedHours: number;
+    effectiveHours: number;
+    minimumApplied: boolean;
+    includedKm: number;
+    distanceKm: number | null;
+    lines: QuoteLine[];
+    total: number;
+  };
 }
 
 export interface OffersResult {
