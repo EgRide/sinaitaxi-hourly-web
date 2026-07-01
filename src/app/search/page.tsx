@@ -181,7 +181,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Param
                 <p className="text-sm text-white/65">
                   <span className="font-bold text-white">{offers.length}</span>
                   {' '}{offers.length === 1 ? 'vehicle option' : 'vehicle options'} ·{' '}
-                  <span className="font-semibold text-emerald-400">cheapest price first</span>
+                  <span className="font-semibold text-emerald-400">one clear price per class</span>
                 </p>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
                   <ShieldCheck className="h-3.5 w-3.5 text-brand-300" />
@@ -283,15 +283,13 @@ const OfferRow: React.FC<{ offer: OfferCard; rank: number; searchParams: SP }> =
         {/* Price + CTA */}
         <div className="flex flex-col items-stretch justify-between gap-4 border-t border-white/10 px-6 py-6 md:items-end md:border-l md:border-t-0">
           <div className="text-right">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-white/45">
-              {offer.partnerCount > 1 ? 'From' : 'Total'}
-            </div>
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-white/45">Total</div>
             <div className="mt-1 text-3xl font-extrabold tracking-tightest text-white">
               {formatPrice(offer.totalPrice, offer.currency)}
             </div>
             {offer.partnerCount > 1 ? (
               <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400">
-                Cheapest of {offer.partnerCount} partners
+                {offer.partnerCount} partners available
               </div>
             ) : null}
             <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-white/45">Paid in full at checkout</div>

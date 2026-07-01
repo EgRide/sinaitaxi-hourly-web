@@ -290,6 +290,8 @@ export interface OfferCard {
   minHours: number;
   maxHours: number;
   partnerCount: number;
+  minimumApplied?: boolean;
+  priceLines?: { kind: string; label: string; amount: number }[];
 }
 
 export interface OffersResult {
