@@ -3,6 +3,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { WhatsAppFab } from '@/components/WhatsAppFab';
 import { Hero, HeroSpacer } from '@/components/sections/Hero';
 import { TrustStrip } from '@/components/sections/TrustStrip';
+import { Partners } from '@/components/sections/Partners';
 import { HowItWorks } from '@/components/sections/HowItWorks';
 import { VehicleClasses } from '@/components/sections/VehicleClasses';
 import { FeaturedDestinations } from '@/components/sections/FeaturedDestinations';
@@ -20,6 +21,7 @@ export default function Home() {
         <Hero />
         <HeroSpacer />
         <TrustStrip />
+        <Partners />
         <HowItWorks />
         <VehicleClasses />
         <FeaturedDestinations />
