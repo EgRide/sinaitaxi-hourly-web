@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { ArrowRight, Lock, ShieldCheck, AlertCircle, Tag, X, CheckCircle2, Plus, Minus, Sparkles } from 'lucide-react';
-import { api, clearCheckoutToken, type CheckoutInput, type OfferCard, type CheckoutChildSeat, type CheckoutCustomExtra } from '@/lib/api';
+import { api, type CheckoutInput, type OfferCard, type CheckoutChildSeat, type CheckoutCustomExtra } from '@/lib/api';
 
 type StripePromise = Promise<Stripe | null> | null;
 let _stripe: StripePromise = null;
@@ -218,8 +218,6 @@ export const CheckoutForm: React.FC<Props> = (props) => {
       const res = await api.checkout(input);
       setBookingId(res.bookingId);
       setAccessToken(res.accessToken);
-      /* The booking exists; the next checkout is a new purchase. */
-      clearCheckoutToken();
       setClientSecret(res.clientSecret);
     } catch (err) {
       setError((err as Error).message);

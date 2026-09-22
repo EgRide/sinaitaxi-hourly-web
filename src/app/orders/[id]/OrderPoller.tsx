@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { loadStripe, type Stripe as StripeJS } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { CheckCircle2, Clock, Car, AlertCircle, Lock, RefreshCw, Gauge, Phone, X, Loader2, User } from 'lucide-react';
-import { api, type BookingDetail } from '@/lib/api';
+import { api, clearCheckoutToken, type BookingDetail } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -46,6 +46,20 @@ const formatPrice = (n: number, currency: string): string => {
 
 export const OrderPoller: React.FC<Props> = ({ initial, accessToken }) => {
   const [booking, setBooking] = useState<BookingDetail>(initial);
+
+  /**
+   * ⚠️ THE PURCHASE ATTEMPT ENDS HERE, NOT AT THE CHECKOUT FORM.
+   * Clearing the checkout token the moment a booking row existed
+   * defeated the point of having one: a declined card drops the
+   * customer back through /search, and with the token already gone the
+   * next submit minted a fresh idempotency key and booked a second
+   * car. The attempt is spent once the booking leaves `pending` —
+   * confirmed, cancelled or expired, all of them end it.
+   */
+  useEffect(() => {
+    if (booking.status === 'pending') return;
+    clearCheckoutToken();
+  }, [booking.status]);
   const [polling, setPolling] = useState(initial.status === 'pending');
 
   // Poll once a second while pending; back off once confirmed.
