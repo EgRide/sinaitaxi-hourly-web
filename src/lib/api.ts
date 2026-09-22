@@ -91,6 +91,63 @@ export type ResolveAddressResult =
       candidates: { id: string; name: string; slug: string | null }[];
     };
 
+/**
+ * The capability that opens ONE booking, carried in the link.
+ *
+ * ⚠️ A BOOKING ID STOPPED BEING A PASSWORD. `/v1/bookings/:id` used to
+ * hand the record to anyone who asked — traveller email, phone,
+ * pickup address, assigned driver — and the cancel route acted on the
+ * same terms. Both are now gated: a caller proves ownership with a
+ * signed-in session or with one of these scoped, expiring tokens, and
+ * a request without one is answered 404 exactly as one for a booking
+ * that does not exist. This site has no customer accounts, so the
+ * token IS how its customers reach their own booking.
+ */
+const key = (t?: string): string => (t ? `?t=${encodeURIComponent(t)}` : '');
+
+/**
+ * One key per checkout attempt, stable across retries of that attempt.
+ *
+ * ⚠️ WITHOUT IT A DECLINED CARD FOLLOWED BY "TRY AGAIN" BUYS THE CAR
+ * TWICE — two bookings, two PaymentIntents, two audit events. The
+ * service has accepted this field for a while; this site never sent
+ * it, so it had the duplicating behaviour the field exists to prevent.
+ */
+const CHECKOUT_KEY = 'sinaitaxi.hourlyCheckoutToken';
+
+const checkoutToken = (): string => {
+  if (typeof window === 'undefined') return '';
+  const existing = window.sessionStorage.getItem(CHECKOUT_KEY);
+  if (existing) return existing;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const token = `htc_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  window.sessionStorage.setItem(CHECKOUT_KEY, token);
+  return token;
+};
+
+/** Called once a booking exists, so the next checkout starts clean. */
+export const clearCheckoutToken = (): void => {
+  if (typeof window !== 'undefined') window.sessionStorage.removeItem(CHECKOUT_KEY);
+};
+
+/** FNV-1a — short, stable, no dependency for something this small. */
+const fold = (input: string): string => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+};
+
+/** Change what is being bought and it is a different purchase. */
+const checkoutKeyFor = (input: CheckoutInput): string =>
+  `${checkoutToken()}_${fold([
+    input.customerEmail, input.offerKey, input.pickupAt,
+    input.durationHours, input.pickupAddress,
+  ].join('|'))}`;
+
 export const api = {
   health: () => request<{ ok: boolean; ts: number; service: string }>('/health'),
 
@@ -119,6 +176,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+
 
   offers: (input: { polygonId: string; durationHours: number; pickupAt: string }) => {
     const qs = new URLSearchParams({
@@ -150,11 +208,11 @@ export const api = {
   checkout: (input: CheckoutInput) =>
     request<CheckoutResult>('/v1/checkout', {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({ idempotencyKey: checkoutKeyFor(input), ...input }),
     }),
 
-  booking: (id: string) =>
-    request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}`),
+  booking: (id: string, t?: string) =>
+    request<BookingDetail>(`/v1/bookings/${encodeURIComponent(id)}${key(t)}`),
 
   destinationContent: (country: string, city: string) =>
     request<{ content: DestinationContent | null }>(
@@ -183,14 +241,14 @@ export const api = {
       body: JSON.stringify(input),
     }),
 
-  cancelBooking: (id: string, reason?: string) =>
+  cancelBooking: (id: string, reason?: string, t?: string) =>
     request<{
       ok: true;
       status: 'cancelled' | 'refunded';
       refundAmount: number;
       refundId: string | null;
       policyApplied: 'full_refund' | 'non_refundable';
-    }>(`/v1/bookings/${encodeURIComponent(id)}/cancel`, {
+    }>(`/v1/bookings/${encodeURIComponent(id)}/cancel${key(t)}`, {
       method: 'POST',
       body: JSON.stringify({ reason: reason ?? undefined }),
     }),
@@ -238,6 +296,10 @@ export interface CheckoutResult {
   clientSecret: string;
   currency: string;
   retailPrice: number;
+  /** ⚠️ Returned once. It is the only way back into this booking. */
+  accessToken?: string;
+  /** True when the service recognised the key and returned the booking it already made. */
+  replayed?: boolean;
 }
 
 export type BookingStatus =

@@ -19,6 +19,12 @@ import { cn } from '@/lib/cn';
 
 interface Props {
   initial: BookingDetail;
+  /**
+   * The capability that opened this page. Every request the poller
+   * and the cancel panel make needs it too, or they start answering
+   * 404 the moment the page becomes interactive.
+   */
+  accessToken?: string;
 }
 
 let _stripe: Promise<StripeJS | null> | null = null;
@@ -38,7 +44,7 @@ const formatPrice = (n: number, currency: string): string => {
   }
 };
 
-export const OrderPoller: React.FC<Props> = ({ initial }) => {
+export const OrderPoller: React.FC<Props> = ({ initial, accessToken }) => {
   const [booking, setBooking] = useState<BookingDetail>(initial);
   const [polling, setPolling] = useState(initial.status === 'pending');
 
@@ -52,7 +58,7 @@ export const OrderPoller: React.FC<Props> = ({ initial }) => {
     let cancelled = false;
     const tick = async () => {
       try {
-        const next = await api.booking(booking.id);
+        const next = await api.booking(booking.id, accessToken);
         if (cancelled) return;
         setBooking(next);
       } catch { /* ignore — next tick retries */ }
@@ -63,7 +69,7 @@ export const OrderPoller: React.FC<Props> = ({ initial }) => {
 
   // 1. Confirmed (success): show the booked-trip summary.
   if (booking.status === 'confirmed' || booking.status === 'started' || booking.status === 'completed' || booking.status === 'settled') {
-    return <ConfirmedView booking={booking} />;
+    return <ConfirmedView booking={booking} accessToken={accessToken} />;
   }
 
   // 2. Cancelled / refunded / no_show: show a final-state explainer.
@@ -75,7 +81,7 @@ export const OrderPoller: React.FC<Props> = ({ initial }) => {
   //    a) resume-pay (we have a clientSecret) → re-mount Stripe Elements
   //    b) the webhook hasn't landed yet → show a loader
   if (booking.stripeClientSecret) {
-    return <ResumePayView booking={booking} />;
+    return <ResumePayView booking={booking} accessToken={accessToken} />;
   }
   return <PollingView booking={booking} polling={polling} />;
 };
@@ -96,7 +102,7 @@ const PollingView: React.FC<{ booking: BookingDetail; polling: boolean }> = ({ b
   </div>
 );
 
-const ResumePayView: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
+const ResumePayView: React.FC<{ booking: BookingDetail; accessToken?: string }> = ({ booking, accessToken }) => {
   const options = useMemo(() => booking.stripeClientSecret
     ? { clientSecret: booking.stripeClientSecret, appearance: { theme: 'stripe' as const, variables: { colorPrimary: '#1E5EFF', borderRadius: '12px' } } }
     : undefined, [booking.stripeClientSecret]);
@@ -145,7 +151,7 @@ const ResumePayInner: React.FC<{ bookingId: string; total: string }> = ({ bookin
   );
 };
 
-const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
+const ConfirmedView: React.FC<{ booking: BookingDetail; accessToken?: string }> = ({ booking, accessToken }) => (
   <div className="space-y-6">
     <div className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
@@ -171,7 +177,7 @@ const ConfirmedView: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
     {booking.driverName ? <DriverCard booking={booking} /> : null}
 
     {booking.status === 'confirmed' && new Date(booking.pickupAt) > new Date() ? (
-      <CancelPanel booking={booking} />
+      <CancelPanel booking={booking} accessToken={accessToken} />
     ) : null}
 
     <div className="glass rounded-3xl p-6">
@@ -327,7 +333,7 @@ const DriverCard: React.FC<{ booking: BookingDetail }> = ({ booking }) => (
   </div>
 );
 
-const CancelPanel: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
+const CancelPanel: React.FC<{ booking: BookingDetail; accessToken?: string }> = ({ booking, accessToken }) => {
   const [open, setOpen] = useState(false);
   const hoursUntilPickup = (new Date(booking.pickupAt).getTime() - Date.now()) / (60 * 60 * 1000);
   const eligibleForRefund = hoursUntilPickup > 24;
@@ -347,12 +353,16 @@ const CancelPanel: React.FC<{ booking: BookingDetail }> = ({ booking }) => {
           Cancel booking
         </button>
       </div>
-      {open ? <CancelModal booking={booking} onClose={() => setOpen(false)} /> : null}
+      {open ? <CancelModal booking={booking} accessToken={accessToken} onClose={() => setOpen(false)} /> : null}
     </>
   );
 };
 
-const CancelModal: React.FC<{ booking: BookingDetail; onClose: () => void }> = ({ booking, onClose }) => {
+const CancelModal: React.FC<{
+  booking: BookingDetail;
+  accessToken?: string;
+  onClose: () => void;
+}> = ({ booking, accessToken, onClose }) => {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -365,7 +375,7 @@ const CancelModal: React.FC<{ booking: BookingDetail; onClose: () => void }> = (
   const onConfirm = async () => {
     setBusy(true); setError(null);
     try {
-      await api.cancelBooking(booking.id, reason || undefined);
+      await api.cancelBooking(booking.id, reason || undefined, accessToken);
       // Reload the page so the poller picks up the new state.
       if (typeof window !== 'undefined') window.location.reload();
     } catch (e) {

@@ -11,16 +11,32 @@ import { api, ApiError } from '@/lib/api';
 import { OrderPoller } from './OrderPoller';
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ t?: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
   return { title: `Booking ${id}`, robots: { index: false } };
 }
 
-export default async function OrderPage({ params }: { params: Params }) {
+/**
+ * ⚠️ A BOOKING ID IS NO LONGER ENOUGH TO OPEN THIS PAGE, and that is
+ * the point — it used to be, for anyone who had it. `?t=` carries the
+ * capability minted at checkout and repeated in the confirmation
+ * email: scoped to this one booking, expiring, useless elsewhere.
+ * This site has no customer accounts, so it is the only way in.
+ *
+ * ⚠️ IT IS ALSO A CREDENTIAL IN A URL, which browser history and the
+ * service's request log will keep. Trading it for a cookie on first
+ * load is the right end state and is written up as remaining work.
+ */
+export default async function OrderPage({
+  params,
+  searchParams,
+}: { params: Params; searchParams: Search }) {
   const { id } = await params;
+  const { t } = await searchParams;
   try {
-    const booking = await api.booking(id);
+    const booking = await api.booking(id, t);
     return (
       <>
         <SiteHeader />
@@ -37,7 +53,7 @@ export default async function OrderPage({ params }: { params: Params }) {
             </Reveal>
 
             <div className="mt-8">
-              <OrderPoller initial={booking} />
+              <OrderPoller initial={booking} accessToken={t} />
             </div>
           </div>
         </main>

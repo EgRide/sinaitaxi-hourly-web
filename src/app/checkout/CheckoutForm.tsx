@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { ArrowRight, Lock, ShieldCheck, AlertCircle, Tag, X, CheckCircle2, Plus, Minus, Sparkles } from 'lucide-react';
-import { api, type CheckoutInput, type OfferCard, type CheckoutChildSeat, type CheckoutCustomExtra } from '@/lib/api';
+import { api, clearCheckoutToken, type CheckoutInput, type OfferCard, type CheckoutChildSeat, type CheckoutCustomExtra } from '@/lib/api';
 
 type StripePromise = Promise<Stripe | null> | null;
 let _stripe: StripePromise = null;
@@ -78,6 +78,13 @@ const StepProgress: React.FC<{ current: 1 | 2 }> = ({ current }) => (
 
 export const CheckoutForm: React.FC<Props> = (props) => {
   const [bookingId, setBookingId] = useState<string | null>(null);
+  /**
+   * ⚠️ RETURNED ONCE, AND IT IS THE ONLY WAY BACK INTO THIS BOOKING.
+   * A booking id stopped being enough to open its own receipt, so
+   * every link out of checkout has to carry the capability the
+   * service minted for this buyer.
+   */
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +217,9 @@ export const CheckoutForm: React.FC<Props> = (props) => {
       };
       const res = await api.checkout(input);
       setBookingId(res.bookingId);
+      setAccessToken(res.accessToken);
+      /* The booking exists; the next checkout is a new purchase. */
+      clearCheckoutToken();
       setClientSecret(res.clientSecret);
     } catch (err) {
       setError((err as Error).message);
@@ -230,7 +240,7 @@ export const CheckoutForm: React.FC<Props> = (props) => {
       <div>
         <StepProgress current={2} />
         <Elements stripe={stripePromise()} options={elementsOptions}>
-          <PayStep bookingId={bookingId} totalLabel={formatPrice(props.offer.totalPrice, props.offer.currency)} />
+          <PayStep bookingId={bookingId} accessToken={accessToken} totalLabel={formatPrice(props.offer.totalPrice, props.offer.currency)} />
         </Elements>
       </div>
     );
@@ -491,7 +501,11 @@ export const CheckoutForm: React.FC<Props> = (props) => {
   );
 };
 
-const PayStep: React.FC<{ bookingId: string; totalLabel: string }> = ({ bookingId, totalLabel }) => {
+/** Where a paid booking lands, carrying the key that opens it. */
+const receiptHref = (bookingId: string, accessToken?: string): string =>
+  `/orders/${bookingId}${accessToken ? `?t=${encodeURIComponent(accessToken)}` : ''}`;
+
+const PayStep: React.FC<{ bookingId: string; accessToken?: string; totalLabel: string }> = ({ bookingId, accessToken, totalLabel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -505,7 +519,11 @@ const PayStep: React.FC<{ bookingId: string; totalLabel: string }> = ({ bookingI
     setSubmitting(true);
     const result = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: `${window.location.origin}/orders/${bookingId}` },
+      /* ⚠️ THE KEY SURVIVES THE ROUND TRIP THROUGH STRIPE, or the
+         customer returns to a receipt that cannot read the booking
+         they have just paid for. Stripe appends its own parameters
+         with `&`, so the query string is preserved. */
+      confirmParams: { return_url: `${window.location.origin}${receiptHref(bookingId, accessToken)}` },
       redirect: 'if_required',
     });
     setSubmitting(false);
@@ -513,7 +531,7 @@ const PayStep: React.FC<{ bookingId: string; totalLabel: string }> = ({ bookingI
       setError(result.error.message ?? 'Payment failed.');
       return;
     }
-    router.push(`/orders/${bookingId}`);
+    router.push(receiptHref(bookingId, accessToken));
   };
 
   return (
